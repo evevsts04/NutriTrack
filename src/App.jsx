@@ -6,8 +6,25 @@ import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged }
 import { getFirestore, doc, setDoc, onSnapshot, collection, addDoc, deleteDoc } from 'firebase/firestore';
 
 // --- FIREBASE INITIALIZATION ---
-// Usando as variáveis globais fornecidas pelo ambiente
-const firebaseConfig = {
+// Configuração unificada: Funciona no seu VS Code (Vercel) e no ambiente de testes
+const getFirebaseConfig = () => {
+  // 1. Se estiver no ambiente de testes:
+  if (typeof __firebase_config !== 'undefined') {
+    return JSON.parse(__firebase_config);
+  }
+  // 2. Se estiver rodando localmente no VS Code com Vite (.env):
+  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_FIREBASE_API_KEY) {
+    return {
+      apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+      authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+      projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+      storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+      messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+      appId: import.meta.env.VITE_FIREBASE_APP_ID
+    };
+  }
+  // 3. Fallback: Cole suas chaves como string aqui caso não queira usar variáveis de ambiente
+  return {
   apiKey: "AIzaSyAxpQwy3PhdfAmxKxprnx85-qAigWq-JNw",
   authDomain: "nutritrack-c9f96.firebaseapp.com",
   projectId: "nutritrack-c9f96",
@@ -15,6 +32,13 @@ const firebaseConfig = {
   messagingSenderId: "817935027576",
   appId: "1:817935027576:web:e4dca43c6188d93bac0c8d"
 };
+};
+
+// Agora `auth` e `db` sempre existirão corretamente, evitando o erro!
+const app = initializeApp(getFirebaseConfig());
+const auth = getAuth(app);
+const db = getFirestore(app);
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'nutritrack-app';
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -496,6 +520,65 @@ export default function App() {
                   </p>
                 </div>
                 <button onClick={() => handleDeleteWeight(w.id)} className="text-slate-400 hover:text-rose-500 transition-colors p-2 rounded-lg hover:bg-rose-50">
+                  <Trash2 size={18} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderWater = () => (
+    <div className="space-y-6 animate-fade-in">
+      <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+        <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+          <Droplet className="text-cyan-500" /> Registrar Água
+        </h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <button onClick={() => handleAddWater(200)} className="flex flex-col items-center justify-center p-4 bg-cyan-50 hover:bg-cyan-100 text-cyan-700 rounded-xl transition-colors border border-cyan-100">
+            <Droplet size={24} className="mb-2" />
+            <span className="font-bold">200 ml</span>
+            <span className="text-xs opacity-70">Copo Padrão</span>
+          </button>
+          <button onClick={() => handleAddWater(350)} className="flex flex-col items-center justify-center p-4 bg-cyan-50 hover:bg-cyan-100 text-cyan-700 rounded-xl transition-colors border border-cyan-100">
+            <Droplet size={28} className="mb-2" />
+            <span className="font-bold">350 ml</span>
+            <span className="text-xs opacity-70">Caneca</span>
+          </button>
+          <button onClick={() => handleAddWater(500)} className="flex flex-col items-center justify-center p-4 bg-cyan-50 hover:bg-cyan-100 text-cyan-700 rounded-xl transition-colors border border-cyan-100">
+            <Droplet size={32} className="mb-2" />
+            <span className="font-bold">500 ml</span>
+            <span className="text-xs opacity-70">Garrafinha</span>
+          </button>
+          <div className="flex flex-col justify-end">
+             <div className="flex items-center gap-2">
+               <input type="number" placeholder="Outro (ml)" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:outline-none" value={waterAmount} onChange={(e) => setWaterAmount(e.target.value)} />
+               <button onClick={() => handleAddWater(waterAmount)} className="bg-cyan-500 hover:bg-cyan-600 text-white p-3 rounded-xl transition-colors">
+                 <Plus size={20} />
+               </button>
+             </div>
+          </div>
+        </div>
+      </div>
+      
+      <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+        <h3 className="text-lg font-bold text-slate-800 mb-4">Histórico de Água (Hoje)</h3>
+        {todayWaterLogs.length === 0 ? (
+          <div className="text-center py-8 text-slate-400">Nenhuma água registrada hoje.</div>
+        ) : (
+          <div className="space-y-3">
+            {todayWaterLogs.map(log => (
+              <div key={log.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
+                <div>
+                  <h4 className="font-bold text-slate-800 text-lg">{log.amount} ml</h4>
+                  <p className="text-sm text-slate-500 flex items-center gap-1 mt-1">
+                    <Calendar size={14} /> 
+                    {new Date(log.timestamp).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}
+                  </p>
+                </div>
+                <button onClick={() => handleDeleteWater(log.id)} className="text-slate-400 hover:text-rose-500 transition-colors p-2 rounded-lg hover:bg-rose-50">
                   <Trash2 size={18} />
                 </button>
               </div>
