@@ -38,6 +38,32 @@
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans antialiased selection:bg-emerald-100 selection:text-emerald-900 min-h-screen flex flex-col md:flex-row">
 
+    <div id="auth-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-50">
+        <div class="bg-white p-8 rounded-3xl shadow-lg border border-slate-100 w-full max-w-md mx-4 animate-fade-in">
+            <div class="flex items-center justify-center gap-2 text-emerald-600 font-black text-3xl mb-8 tracking-tight">
+                <i data-lucide="activity" class="w-8 h-8"></i> NutriTrack
+            </div>
+            <h2 id="auth-title" class="text-2xl font-bold text-slate-800 mb-6 text-center">Entrar</h2>
+            
+            <form id="form-auth" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                    <input type="email" id="auth-email" required placeholder="seu@email.com" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Senha</label>
+                    <input type="password" id="auth-pass" required placeholder="••••••••" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none">
+                </div>
+                <div id="auth-error" class="text-rose-500 text-sm hidden text-center bg-rose-50 p-2 rounded-lg"></div>
+                <button type="submit" id="auth-submit-btn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow-md transition-all">Entrar</button>
+            </form>
+            
+            <p id="auth-toggle-text" class="text-center text-sm text-slate-500 mt-6">
+                Não tem uma conta? <span class="text-emerald-600 cursor-pointer hover:underline font-medium" onclick="toggleAuthMode()">Criar agora</span>
+            </p>
+        </div>
+    </div>
+
     <!-- Mobile Header -->
     <div class="md:hidden bg-white border-b border-slate-200 p-4 flex items-center justify-between sticky top-0 z-20">
         <div class="flex items-center gap-2 text-emerald-600 font-black text-xl tracking-tight">
@@ -68,11 +94,14 @@
                 <i data-lucide="scale"></i> Peso
             </button>
             <button onclick="switchTab('calculator')" id="nav-calculator" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-800">
-                <i data-lucide="calculator"></i> Calculadora
+                <i data-lucide="calculator"></i> Calculadora e API
             </button>
         </div>
         
         <div class="p-4 border-t border-slate-100">
+            <button onclick="handleLogout()" class="w-full flex items-center justify-center gap-2 px-4 py-2 mb-4 rounded-xl transition-all duration-200 font-medium text-rose-500 hover:bg-rose-50">
+                <i data-lucide="log-out" class="w-4 h-4"></i> Sair da Conta
+            </button>
             <div class="bg-slate-50 p-4 rounded-xl">
                 <p class="text-xs text-slate-500 font-medium mb-1">Meta Diária</p>
                 <p class="text-lg font-bold text-slate-800"><span id="sidebar-goal">2000</span> <span class="text-sm font-normal text-slate-500">kcal</span></p>
@@ -276,75 +305,92 @@
         </div>
 
         <!-- VIEW: CALCULATOR -->
-        <div id="view-calculator" class="view-section">
-            <header class="mb-8 hidden md:block">
-                <h1 class="text-3xl font-bold text-slate-800">Calculadora</h1>
-            </header>
+    <div id="view-calculator" class="view-section">
+        <header class="mb-8 hidden md:block">
+            <h1 class="text-3xl font-bold text-slate-800">Calculadora e Perfil</h1>
+        </header>
 
-            <div class="max-w-3xl mx-auto bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
-                <div class="flex items-center gap-3 mb-6">
-                    <div class="p-3 bg-indigo-50 text-indigo-500 rounded-xl"><i data-lucide="calculator"></i></div>
-                    <div>
-                        <h2 class="text-2xl font-bold text-slate-800">Calculadora de Calorias</h2>
-                        <p class="text-slate-500 text-sm mt-1">Descubra sua meta diária ideal.</p>
-                    </div>
+        <div class="max-w-3xl mx-auto bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="p-3 bg-indigo-50 text-indigo-500 rounded-xl"><i data-lucide="calculator"></i></div>
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-800">Seu Perfil e Metas</h2>
+                    <p class="text-slate-500 text-sm mt-1">Configure seus dados para calcularmos suas metas ideais.</p>
                 </div>
+            </div>
 
-                <form id="form-calc" class="space-y-6">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-2">Gênero</label>
-                            <select id="calc-gender" class="w-full p-3 bg-slate-50 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none">
-                                <option value="male">Masculino</option>
-                                <option value="female">Feminino</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-2">Idade</label>
-                            <input type="number" id="calc-age" required class="w-full p-3 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-2">Peso (kg)</label>
-                            <input type="number" id="calc-weight" required step="0.1" class="w-full p-3 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-2">Altura (cm)</label>
-                            <input type="number" id="calc-height" required class="w-full p-3 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500">
-                        </div>
-                    </div>
+            <form id="form-calc" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-2">Atividade Física</label>
-                        <select id="calc-activity" class="w-full p-3 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500">
-                            <option value="1.2">Sedentário</option>
-                            <option value="1.375">Leve</option>
-                            <option value="1.55">Moderado</option>
-                            <option value="1.725">Intenso</option>
-                            <option value="1.9">Muito Intenso</option>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">Gênero</label>
+                        <select id="calc-gender" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <option value="male">Masculino</option>
+                            <option value="female">Feminino</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-2">Objetivo</label>
-                        <div class="grid grid-cols-3 gap-3">
-                            <button type="button" onclick="setGoal('lose')" id="btn-lose" class="goal-btn p-3 rounded-xl border border-slate-200 bg-white text-slate-600 font-medium">Perder</button>
-                            <button type="button" onclick="setGoal('maintain')" id="btn-maintain" class="goal-btn p-3 rounded-xl border border-indigo-500 bg-indigo-50 text-indigo-700 font-medium">Manter</button>
-                            <button type="button" onclick="setGoal('gain')" id="btn-gain" class="goal-btn p-3 rounded-xl border border-slate-200 bg-white text-slate-600 font-medium">Ganhar</button>
-                        </div>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">Idade</label>
+                        <input type="number" id="calc-age" required min="1" placeholder="Ex: 30" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500">
                     </div>
-                    <div class="pt-4 border-t border-slate-100">
-                        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl shadow-md transition-colors flex justify-center gap-2">
-                            <i data-lucide="target"></i> Salvar Meta
-                        </button>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">Peso Inicial (kg)</label>
+                        <input type="number" id="calc-weight" required step="0.1" min="1" placeholder="Ex: 75.5" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500">
                     </div>
-                </form>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">Altura (cm)</label>
+                        <input type="number" id="calc-height" required min="50" placeholder="Ex: 175" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-2">Nível de Atividade Física</label>
+                    <select id="calc-activity" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="1.2">Sedentário (Pouco ou nenhum exercício)</option>
+                        <option value="1.375">Leve (Exercício leve 1-3 dias/semana)</option>
+                        <option value="1.55">Moderado (Exercício moderado 3-5 dias/semana)</option>
+                        <option value="1.725">Intenso (Exercício intenso 6-7 dias/semana)</option>
+                        <option value="1.9">Muito Intenso (Trabalho físico ou treino 2x/dia)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-2">Qual seu objetivo principal?</label>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <button type="button" onclick="setGoal('lose')" id="btn-lose" class="goal-btn p-3 rounded-xl border border-slate-200 bg-white text-slate-600 font-medium transition-colors hover:bg-slate-50">Perder Peso</button>
+                        <button type="button" onclick="setGoal('maintain')" id="btn-maintain" class="goal-btn p-3 rounded-xl border border-indigo-500 bg-indigo-50 text-indigo-700 font-medium transition-colors">Manter o Peso</button>
+                        <button type="button" onclick="setGoal('gain')" id="btn-gain" class="goal-btn p-3 rounded-xl border border-slate-200 bg-white text-slate-600 font-medium transition-colors hover:bg-slate-50">Ganhar Massa</button>
+                    </div>
+                </div>
+                <div class="pt-6 border-t border-slate-100">
+                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl shadow-md transition-all duration-200 flex justify-center items-center gap-2 transform active:scale-95">
+                        <i data-lucide="save"></i> Salvar Perfil e Calcular Metas
+                    </button>
+                </div>
+            </form>
+
+            <div class="mt-10 pt-8 border-t border-slate-200">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="p-3 bg-amber-50 text-amber-500 rounded-xl"><i data-lucide="key"></i></div>
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-800">Inteligência Artificial (API)</h2>
+                        <p class="text-slate-500 text-sm mt-1">Configure sua chave do Google Gemini para ter cálculos e recomendações avançadas.</p>
+                    </div>
+                </div>
+                <div class="flex flex-col md:flex-row gap-3">
+                    <input type="password" id="api-key-input" placeholder="Cole sua API Key (AIzaSy...)" class="flex-1 p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500">
+                    <button onclick="saveApiKey()" id="btn-save-api" class="bg-amber-500 hover:bg-amber-600 text-white font-medium px-6 py-3 rounded-xl transition-all flex justify-center items-center gap-2">
+                        <i data-lucide="save" class="w-5 h-5"></i> Salvar Chave
+                    </button>
+                </div>
+                <p class="text-xs text-slate-400 mt-2">Sua chave é criptografada e salva apenas no seu histórico privado de usuário no banco de dados.</p>
             </div>
         </div>
+    </div>
 
-    </main>
+</main>
 
     <!-- Módulos do Firebase (Versão 11.6.1 requerida pelas regras da plataforma) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot, collection, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // Firebase Configurações Fixas
@@ -369,21 +415,24 @@
         let mealsData = [];
         let weightsData = [];
         let waterData = [];
-        let userSettings = { calorieGoal: 2000, waterGoal: 2500 };
+        let userSettings = { 
+            calorieGoal: 2000, 
+            waterGoal: 2500,
+            macros: { carbs: 50, protein: 30, fat: 20 }
+        };
         let selectedGoal = 'maintain'; // Para a calculadora
         let weightChartInstance = null; // Instância do Chart.js
+        let geminiApiKey = ""; // Chave do Gemini
 
         // Inicia Icones
         lucide.createIcons();
 
-        // 1. Autenticação
         const initAuth = async () => {
             try {
                 if (typeof window.__initial_auth_token !== 'undefined' && window.__initial_auth_token) {
                     await signInWithCustomToken(auth, window.__initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
+                } 
+                // Se não houver token, aguarda o usuário fazer login no formulário visual
             } catch (err) {
                 console.error("Auth falhou:", err);
             }
@@ -391,9 +440,11 @@
 
         onAuthStateChanged(auth, (user) => {
             currentUser = user;
-            if (user) {
+            if (user && !user.isAnonymous) {
+                document.getElementById('auth-screen').classList.add('hidden');
                 attachListeners();
             } else {
+                document.getElementById('auth-screen').classList.remove('hidden');
                 document.getElementById('loading-screen').classList.add('hidden');
             }
         });
@@ -429,7 +480,25 @@
 
             onSnapshot(settingsRef, (snap) => {
                 const s = snap.docs.find(d => d.id === 'profile');
-                if (s) userSettings = { ...userSettings, ...s.data() };
+                if (s) {
+                    userSettings = { ...userSettings, ...s.data() };
+                    // Atualiza form da calculadora se houver dados
+                    if(s.data().gender) document.getElementById('calc-gender').value = s.data().gender;
+                    if(s.data().age) document.getElementById('calc-age').value = s.data().age;
+                    if(s.data().height) document.getElementById('calc-height').value = s.data().height;
+                    if(s.data().activity) document.getElementById('calc-activity').value = s.data().activity;
+                    if(s.data().goal) window.setGoal(s.data().goal);
+                    if(s.data().geminiApiKey) {
+                        geminiApiKey = s.data().geminiApiKey;
+                        document.getElementById('api-key-input').value = geminiApiKey;
+                    }
+                }
+                
+                // Se temos dados de peso, atualiza o campo da calc (apenas no carregamento inicial)
+                if(weightsData.length > 0 && !document.getElementById('calc-weight').value) {
+                     document.getElementById('calc-weight').value = weightsData[0].weight;
+                }
+
                 document.getElementById('loading-screen').classList.add('hidden');
                 updateUI();
             }, console.error);
@@ -623,6 +692,77 @@
             } catch(err) { console.error(err); }
         });
 
+        window.toggleAuthMode = () => {
+            const isLogin = document.getElementById('auth-title').innerText === 'Entrar';
+            document.getElementById('auth-title').innerText = isLogin ? 'Criar Conta' : 'Entrar';
+            document.getElementById('auth-submit-btn').innerText = isLogin ? 'Cadastrar' : 'Entrar';
+            document.getElementById('auth-toggle-text').innerHTML = isLogin 
+                ? 'Já tem uma conta? <span class="text-emerald-600 cursor-pointer hover:underline font-medium" onclick="toggleAuthMode()">Entrar</span>' 
+                : 'Não tem uma conta? <span class="text-emerald-600 cursor-pointer hover:underline font-medium" onclick="toggleAuthMode()">Criar agora</span>';
+            document.getElementById('auth-error').classList.add('hidden');
+        };
+
+        document.getElementById('form-auth').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('auth-email').value;
+            const pass = document.getElementById('auth-pass').value;
+            const isLogin = document.getElementById('auth-title').innerText === 'Entrar';
+            const errorDiv = document.getElementById('auth-error');
+            const btn = document.getElementById('auth-submit-btn');
+            
+            errorDiv.classList.add('hidden');
+            btn.innerHTML = '<i class="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full mx-auto block"></i>';
+            
+            try {
+                if (isLogin) {
+                    await signInWithEmailAndPassword(auth, email, pass);
+                } else {
+                    await createUserWithEmailAndPassword(auth, email, pass);
+                }
+            } catch (error) {
+                errorDiv.innerText = error.message.includes('auth/') ? 'Dados inválidos. Verifique seu email e senha.' : 'Erro de conexão.';
+                errorDiv.classList.remove('hidden');
+                btn.innerHTML = isLogin ? 'Entrar' : 'Cadastrar';
+            }
+        });
+
+        window.handleLogout = async () => {
+            await signOut(auth);
+            // Limpa a tela localmente
+            mealsData = []; weightsData = []; waterData = [];
+            document.getElementById('auth-email').value = '';
+            document.getElementById('auth-pass').value = '';
+            document.getElementById('auth-submit-btn').innerHTML = 'Entrar';
+        };
+
+        window.saveApiKey = async () => {
+            if(!currentUser) return;
+            const key = document.getElementById('api-key-input').value;
+            const btn = document.getElementById('btn-save-api');
+            const originalHtml = btn.innerHTML;
+            
+            btn.innerHTML = '<i class="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full block"></i> Salvando...';
+            
+            try {
+                await setDoc(doc(db, 'artifacts', __app_id, 'users', currentUser.uid, 'settings', 'profile'), { geminiApiKey: key }, { merge: true });
+                btn.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5"></i> Salvo!';
+                btn.classList.replace('bg-amber-500', 'bg-emerald-500');
+                btn.classList.replace('hover:bg-amber-600', 'hover:bg-emerald-600');
+                lucide.createIcons();
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalHtml;
+                    btn.classList.replace('bg-emerald-500', 'bg-amber-500');
+                    btn.classList.replace('hover:bg-emerald-600', 'hover:bg-amber-600');
+                    lucide.createIcons();
+                }, 2000);
+            } catch(e) {
+                console.error(e);
+                alert("Falha ao salvar a chave de API no banco de dados.");
+                btn.innerHTML = originalHtml;
+            }
+        };
+
         // 5. Calculadora de Calorias
         window.setGoal = (goalType) => {
             selectedGoal = goalType;
@@ -652,58 +792,61 @@
             if(selectedGoal === 'lose') finalCals -= 500;
             if(selectedGoal === 'gain') finalCals += 500;
 
-            const rounded = Math.round(finalCals);
+            const roundedCals = Math.round(finalCals);
+            
+            // Calculo de Água (35ml por kg)
+            const waterGoal = Math.round(weight * 35);
+
+            // Calculo de Macros Simples
+            let macros = { carbs: 50, protein: 30, fat: 20 };
+            if (selectedGoal === 'lose') macros = { carbs: 40, protein: 40, fat: 20 };
+            if (selectedGoal === 'gain') macros = { carbs: 50, protein: 25, fat: 25 };
 
             try {
+                // Salvar Perfil
                 const docRef = doc(db, 'artifacts', __app_id, 'users', currentUser.uid, 'settings', 'profile');
-                await setDoc(docRef, { calorieGoal: rounded }, { merge: true });
-                window.switchTab('dashboard'); // Volta pro dashboard após salvar
-            } catch(err) { console.error(err); }
+                await setDoc(docRef, { 
+                    calorieGoal: roundedCals,
+                    waterGoal: waterGoal,
+                    gender: gender,
+                    age: age,
+                    height: height,
+                    activity: activity,
+                    goal: selectedGoal,
+                    macros: macros,
+                    updatedAt: Date.now()
+                }, { merge: true });
+
+                // Salvar o peso inicial no histórico se não existir
+                if (weightsData.length === 0) {
+                     await addDoc(collection(db, 'artifacts', __app_id, 'users', currentUser.uid, 'weights'), { 
+                         weight: weight, 
+                         timestamp: Date.now() 
+                     });
+                }
+
+                // Feedback visual e redirecionamento
+                const btn = e.target.querySelector('button[type="submit"]');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<i data-lucide="check-circle"></i> Salvo com Sucesso!';
+                btn.classList.add('bg-emerald-500', 'hover:bg-emerald-600');
+                btn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+                lucide.createIcons();
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.classList.remove('bg-emerald-500', 'hover:bg-emerald-600');
+                    btn.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+                    lucide.createIcons();
+                    window.switchTab('dashboard');
+                }, 1500);
+
+            } catch(err) { 
+                console.error("Erro ao salvar perfil:", err); 
+                alert("Erro ao salvar. Tente novamente."); // fallback se a UI falhar
+            }
         });
 
-    </script>
-
-    <script>
-        // Navegação de Abas (Tabs) Vanilla JS
-        function switchTab(tabId) {
-            // Esconde todas as views
-            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
-            // Mostra a selecionada
-            document.getElementById(`view-${tabId}`).classList.add('active');
-            
-            // Atualiza botões do sidebar
-            document.querySelectorAll('.nav-btn').forEach(btn => {
-                btn.className = 'nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-800';
-            });
-            const activeBtn = document.getElementById(`nav-${tabId}`);
-            if(activeBtn) activeBtn.className = 'nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium bg-emerald-50 text-emerald-700 shadow-sm';
-            
-            // Fecha menu mobile
-            toggleMenu(true);
-        }
-
-        // Mobile Menu Toggle
-        let menuOpen = false;
-        function toggleMenu(forceClose = false) {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('mobile-overlay');
-            const icon = document.getElementById('menu-icon');
-
-            if (menuOpen || forceClose) {
-                sidebar.classList.add('-translate-x-full');
-                overlay.classList.add('hidden');
-                icon.setAttribute('data-lucide', 'menu');
-                menuOpen = false;
-            } else {
-                sidebar.classList.remove('-translate-x-full');
-                overlay.classList.remove('hidden');
-                icon.setAttribute('data-lucide', 'x');
-                menuOpen = true;
-            }
-            lucide.createIcons();
-        }
-
-        document.getElementById('mobile-menu-btn').addEventListener('click', () => toggleMenu());
     </script>
 </body>
 </html>
