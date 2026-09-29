@@ -69,7 +69,8 @@
         <div class="flex items-center gap-2 text-emerald-600 font-black text-xl tracking-tight">
             <i data-lucide="activity"></i> NutriTrack
         </div>
-        <button id="mobile-menu-btn" class="p-2 text-slate-500">
+        <!-- CORREÇÃO: Adicionado o onclick="toggleMenu()" aqui -->
+        <button id="mobile-menu-btn" onclick="toggleMenu()" class="p-2 text-slate-500">
             <i data-lucide="menu" id="menu-icon"></i>
         </button>
     </div>
@@ -387,13 +388,11 @@
 
 </main>
 
-    <!-- Módulos do Firebase (Versão 11.6.1 requerida pelas regras da plataforma) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot, collection, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Firebase Configurações Fixas
         const firebaseConfig = {
             apiKey: "AIzaSyAxpQwy3PhdfAmxKxprnx85-qAigWq-JNw",
             authDomain: "nutritrack-c9f96.firebaseapp.com",
@@ -407,10 +406,8 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
         
-        // Define APP ID para não dar erro nos caminhos
         const __app_id = typeof window.__app_id !== 'undefined' ? window.__app_id : 'nutritrack-app';
 
-        // Variáveis de Estado Global
         let currentUser = null;
         let mealsData = [];
         let weightsData = [];
@@ -420,19 +417,73 @@
             waterGoal: 2500,
             macros: { carbs: 50, protein: 30, fat: 20 }
         };
-        let selectedGoal = 'maintain'; // Para a calculadora
-        let weightChartInstance = null; // Instância do Chart.js
-        let geminiApiKey = ""; // Chave do Gemini
+        let selectedGoal = 'maintain'; 
+        let weightChartInstance = null; 
+        let geminiApiKey = ""; 
 
-        // Inicia Icones
         lucide.createIcons();
+
+        // -------------------------------------------------------------
+        // CORREÇÃO: Funções Globais (Declaradas no início para evitar erros)
+        // -------------------------------------------------------------
+        window.switchTab = (tabId) => {
+            document.querySelectorAll('.view-section').forEach(el => {
+                el.classList.remove('active');
+            });
+            
+            document.getElementById('view-' + tabId).classList.add('active');
+            
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.className = 'nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-800';
+            });
+            
+            const activeBtn = document.getElementById('nav-' + tabId);
+            if (activeBtn) {
+                activeBtn.className = 'nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium bg-emerald-50 text-emerald-700 shadow-sm';
+            }
+            
+            if (tabId === 'dashboard') {
+                setTimeout(renderChart, 50); // Garante que o Chart.js calcule as dimensões corretamente
+            }
+            
+            if (window.innerWidth < 768) {
+                const sidebar = document.getElementById('sidebar');
+                if (!sidebar.classList.contains('-translate-x-full')) {
+                    window.toggleMenu();
+                }
+            }
+        };
+
+        window.toggleMenu = () => {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobile-overlay');
+            
+            if (sidebar.classList.contains('-translate-x-full')) {
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
+            }
+        };
+
+        window.setGoal = (goalType) => {
+            selectedGoal = goalType;
+            document.querySelectorAll('.goal-btn').forEach(btn => {
+                btn.className = 'goal-btn p-3 rounded-xl border font-medium border-slate-200 bg-white text-slate-600';
+            });
+            const active = document.getElementById(`btn-${goalType}`);
+            if(active) {
+                active.className = 'goal-btn p-3 rounded-xl border font-medium border-indigo-500 bg-indigo-50 text-indigo-700';
+            }
+        };
+        // -------------------------------------------------------------
 
         const initAuth = async () => {
             try {
                 if (typeof window.__initial_auth_token !== 'undefined' && window.__initial_auth_token) {
                     await signInWithCustomToken(auth, window.__initial_auth_token);
                 } 
-                // Se não houver token, aguarda o usuário fazer login no formulário visual
             } catch (err) {
                 console.error("Auth falhou:", err);
             }
@@ -451,18 +502,15 @@
 
         initAuth();
 
-        // 2. Ouvintes do Banco de Dados (Firestore)
         function attachListeners() {
             if (!currentUser) return;
             const uid = currentUser.uid;
 
-            // Refs baseadas na Regra de Storage
             const mealsRef = collection(db, 'artifacts', __app_id, 'users', uid, 'meals');
             const weightsRef = collection(db, 'artifacts', __app_id, 'users', uid, 'weights');
             const waterRef = collection(db, 'artifacts', __app_id, 'users', uid, 'water');
             const settingsRef = collection(db, 'artifacts', __app_id, 'users', uid, 'settings');
 
-            // Listeners
             onSnapshot(mealsRef, (snap) => {
                 mealsData = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => b.timestamp - a.timestamp);
                 updateUI();
@@ -482,7 +530,6 @@
                 const s = snap.docs.find(d => d.id === 'profile');
                 if (s) {
                     userSettings = { ...userSettings, ...s.data() };
-                    // Atualiza form da calculadora se houver dados
                     if(s.data().gender) document.getElementById('calc-gender').value = s.data().gender;
                     if(s.data().age) document.getElementById('calc-age').value = s.data().age;
                     if(s.data().height) document.getElementById('calc-height').value = s.data().height;
@@ -494,7 +541,6 @@
                     }
                 }
                 
-                // Se temos dados de peso, atualiza o campo da calc (apenas no carregamento inicial)
                 if(weightsData.length > 0 && !document.getElementById('calc-weight').value) {
                      document.getElementById('calc-weight').value = weightsData[0].weight;
                 }
@@ -504,16 +550,17 @@
             }, console.error);
         }
 
-        // 3. Atualizar toda a UI
         function updateUI() {
             renderDashboard();
             renderLists();
-            renderChart();
-            lucide.createIcons(); // Recriar icones recém adicionados via innerHTML
+            // Apenas renderiza se a tela estiver visível (evita o canvas desaparecer)
+            if(document.getElementById('view-dashboard').classList.contains('active')) {
+                renderChart();
+            }
+            lucide.createIcons(); 
         }
 
         function renderDashboard() {
-            // Cálculos
             const hoje = new Date().setHours(0,0,0,0);
             
             const refeicoesHoje = mealsData.filter(m => new Date(m.timestamp).setHours(0,0,0,0) === hoje);
@@ -524,7 +571,6 @@
             
             const peso = weightsData.length > 0 ? weightsData[0].weight : '--';
 
-            // Atualiza Textos
             document.getElementById('sidebar-goal').innerText = userSettings.calorieGoal;
             document.getElementById('cal-goal-display').innerText = userSettings.calorieGoal + ' kcal';
             document.getElementById('cal-consumed').innerText = calorias;
@@ -532,19 +578,17 @@
             document.getElementById('water-goal-display').innerText = userSettings.waterGoal;
             document.getElementById('water-consumed').innerText = agua;
 
-            // Progresso Circular (Usando stroke-dasharray SVG)
             let percCal = Math.min((calorias / userSettings.calorieGoal) * 100, 100) || 0;
             const pathCal = document.getElementById('cal-progress');
             pathCal.setAttribute('stroke-dasharray', `${percCal}, 100`);
-            pathCal.classList.toggle('text-rose-500', percCal >= 100 && calorias > userSettings.calorieGoal);
-            pathCal.classList.toggle('text-emerald-500', percCal < 100 || calorias <= userSettings.calorieGoal);
+            pathCal.classList.toggle('text-rose-500', calorias > userSettings.calorieGoal);
+            pathCal.classList.toggle('text-emerald-500', calorias <= userSettings.calorieGoal);
 
             let percAgua = Math.min((agua / userSettings.waterGoal) * 100, 100) || 0;
             document.getElementById('water-progress').setAttribute('stroke-dasharray', `${percAgua}, 100`);
         }
 
         function renderLists() {
-            // Lista de Refeições
             const mealsList = document.getElementById('meals-list');
             if (mealsData.length === 0) mealsList.innerHTML = '<div class="text-center py-8 text-slate-400">Nenhuma refeição registrada.</div>';
             else mealsList.innerHTML = mealsData.map(m => `
@@ -562,7 +606,6 @@
                 </div>
             `).join('');
 
-            // Lista de Água (Apenas Hoje)
             const hoje = new Date().setHours(0,0,0,0);
             const waterList = document.getElementById('water-list');
             const aguaHoje = waterData.filter(w => new Date(w.timestamp).setHours(0,0,0,0) === hoje);
@@ -580,7 +623,6 @@
                 </div>
             `).join('');
 
-            // Lista de Pesos
             const weightList = document.getElementById('weight-list');
             if (weightsData.length === 0) weightList.innerHTML = '<div class="text-center py-8 text-slate-400">Nenhum peso registrado.</div>';
             else weightList.innerHTML = weightsData.map(w => `
@@ -606,14 +648,12 @@
             document.getElementById('empty-chart-msg').style.display = 'none';
             const ctx = document.getElementById('weightChart').getContext('2d');
             
-            // Dados Cronológicos
             const sorted = [...weightsData].sort((a,b) => a.timestamp - b.timestamp);
             const labels = sorted.map(w => new Date(w.timestamp).toLocaleDateString([], {day:'2-digit', month:'2-digit'}));
             const data = sorted.map(w => w.weight);
 
             if (weightChartInstance) weightChartInstance.destroy();
 
-            // Gradiente
             let gradient = ctx.createLinearGradient(0, 0, 0, 250);
             gradient.addColorStop(0, 'rgba(59, 130, 246, 0.4)');
             gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
@@ -647,8 +687,6 @@
             });
         }
 
-        // 4. Ações Globais (Adicionadas ao Window para funcionar nos onClick do HTML)
-        
         window.delRecord = async (colName, id) => {
             if(!currentUser) return;
             try { await deleteDoc(doc(db, 'artifacts', __app_id, 'users', currentUser.uid, colName, id)); } 
@@ -728,7 +766,6 @@
 
         window.handleLogout = async () => {
             await signOut(auth);
-            // Limpa a tela localmente
             mealsData = []; weightsData = []; waterData = [];
             document.getElementById('auth-email').value = '';
             document.getElementById('auth-pass').value = '';
@@ -763,17 +800,6 @@
             }
         };
 
-        // 5. Calculadora de Calorias
-        window.setGoal = (goalType) => {
-            selectedGoal = goalType;
-            // Atualiza Estilos dos Botões
-            document.querySelectorAll('.goal-btn').forEach(btn => {
-                btn.className = 'goal-btn p-3 rounded-xl border font-medium border-slate-200 bg-white text-slate-600';
-            });
-            const active = document.getElementById(`btn-${goalType}`);
-            active.className = 'goal-btn p-3 rounded-xl border font-medium border-indigo-500 bg-indigo-50 text-indigo-700';
-        };
-
         document.getElementById('form-calc').addEventListener('submit', async (e) => {
             e.preventDefault();
             if(!currentUser) return;
@@ -784,7 +810,6 @@
             const height = Number(document.getElementById('calc-height').value);
             const activity = Number(document.getElementById('calc-activity').value);
 
-            // Harris-Benedict (Mifflin-St Jeor)
             let bmr = (10 * weight) + (6.25 * height) - (5 * age);
             bmr = gender === 'male' ? bmr + 5 : bmr - 161;
 
@@ -793,17 +818,13 @@
             if(selectedGoal === 'gain') finalCals += 500;
 
             const roundedCals = Math.round(finalCals);
-            
-            // Calculo de Água (35ml por kg)
             const waterGoal = Math.round(weight * 35);
 
-            // Calculo de Macros Simples
             let macros = { carbs: 50, protein: 30, fat: 20 };
             if (selectedGoal === 'lose') macros = { carbs: 40, protein: 40, fat: 20 };
             if (selectedGoal === 'gain') macros = { carbs: 50, protein: 25, fat: 25 };
 
             try {
-                // Salvar Perfil
                 const docRef = doc(db, 'artifacts', __app_id, 'users', currentUser.uid, 'settings', 'profile');
                 await setDoc(docRef, { 
                     calorieGoal: roundedCals,
@@ -817,7 +838,6 @@
                     updatedAt: Date.now()
                 }, { merge: true });
 
-                // Salvar o peso inicial no histórico se não existir
                 if (weightsData.length === 0) {
                      await addDoc(collection(db, 'artifacts', __app_id, 'users', currentUser.uid, 'weights'), { 
                          weight: weight, 
@@ -825,7 +845,6 @@
                      });
                 }
 
-                // Feedback visual e redirecionamento
                 const btn = e.target.querySelector('button[type="submit"]');
                 const originalText = btn.innerHTML;
                 btn.innerHTML = '<i data-lucide="check-circle"></i> Salvo com Sucesso!';
@@ -843,10 +862,9 @@
 
             } catch(err) { 
                 console.error("Erro ao salvar perfil:", err); 
-                alert("Erro ao salvar. Tente novamente."); // fallback se a UI falhar
+                alert("Erro ao salvar. Tente novamente."); 
             }
         });
-
     </script>
 </body>
 </html>
