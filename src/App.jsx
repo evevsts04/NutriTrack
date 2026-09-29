@@ -1,46 +1,94 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, Component } from 'react';
 import { Activity, Apple, Scale, Calculator as CalcIcon, Plus, Trash2, Home, Menu, X, Target, TrendingUp, Calendar, Droplet } from 'lucide-react';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, doc, setDoc, onSnapshot, collection, addDoc, deleteDoc } from 'firebase/firestore';
 
-// --- FIREBASE INITIALIZATION ---
-// Configuração unificada: Funciona no seu VS Code (Vercel) e no ambiente de testes
+// --- FIREBASE INITIALIZATION SAFEGUARD ---
+// This function safely attempts to get the config.
 const getFirebaseConfig = () => {
-  // 1. Se estiver no ambiente de testes:
+  // 1. Test Environment (Website)
   if (typeof __firebase_config !== 'undefined') {
     return JSON.parse(__firebase_config);
   }
-  // 2. Se estiver rodando localmente no VS Code com Vite (.env):
-  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_FIREBASE_API_KEY) {
+  
+  // 2. Vite Environment Variables (Local .env or Vercel Settings)
+  // We use optional chaining and a fallback to prevent "Cannot read properties of undefined"
+  const env = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env : {};
+  
+  if (env.VITE_FIREBASE_API_KEY) {
     return {
-      apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-      authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-      projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-      storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-      messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-      appId: import.meta.env.VITE_FIREBASE_APP_ID
+      apiKey: env.VITE_FIREBASE_API_KEY,
+      authDomain: env.VITE_FIREBASE_AUTH_DOMAIN,
+      projectId: env.VITE_FIREBASE_PROJECT_ID,
+      storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET,
+      messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+      appId: env.VITE_FIREBASE_APP_ID
     };
   }
-  // 3. Fallback: Cole suas chaves como string aqui caso não queira usar variáveis de ambiente
+
+  // 3. HARDCODED FALLBACK (Required if Vercel Env Vars are not set yet)
+  // Ensure these are your actual Firebase keys.
   return {
-  apiKey: "AIzaSyAxpQwy3PhdfAmxKxprnx85-qAigWq-JNw",
-  authDomain: "nutritrack-c9f96.firebaseapp.com",
-  projectId: "nutritrack-c9f96",
-  storageBucket: "nutritrack-c9f96.firebasestorage.app",
-  messagingSenderId: "817935027576",
-  appId: "1:817935027576:web:e4dca43c6188d93bac0c8d"
-};
+    apiKey: "AIzaSyAxpQwy3PhdfAmxKxprnx85-qAigWq-JNw",
+    authDomain: "nutritrack-c9f96.firebaseapp.com",
+    projectId: "nutritrack-c9f96",
+    storageBucket: "nutritrack-c9f96.firebasestorage.app",
+    messagingSenderId: "817935027576",
+    appId: "1:817935027576:web:e4dca43c6188d93bac0c8d"
+  };
 };
 
-// Agora `auth` e `db` sempre existirão corretamente, evitando o erro!
-const app = initializeApp(getFirebaseConfig());
-const auth = getAuth(app);
-const db = getFirestore(app);
+// Initialize Firebase securely outside the component to avoid re-initialization loops
+let app, auth, db;
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'nutritrack-app';
 
-export default function App() {
+try {
+  const config = getFirebaseConfig();
+  // Prevent "Firebase App named '[DEFAULT]' already exists" error during hot-reloads
+  app = !getApps().length ? initializeApp(config) : getApp();
+  auth = getAuth(app);
+  db = getFirestore(app);
+} catch (error) {
+  console.error("Critical Firebase Initialization Error:", error);
+}
+
+// --- ERROR BOUNDARY ---
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null, errorInfo: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error("ErrorBoundary caught an error:", error, errorInfo);
+    this.setState({ errorInfo });
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '2rem', fontFamily: 'sans-serif', maxWidth: '800px', margin: '0 auto', background: '#fef2f2', minHeight: '100vh' }}>
+          <h2 style={{ color: '#dc2626', borderBottom: '2px solid #fca5a5', paddingBottom: '10px', fontSize: '24px' }}>
+            ⚠️ Ops! Ocorreu um erro no aplicativo.
+          </h2>
+          <p style={{ marginTop: '1rem', color: '#7f1d1d', fontWeight: 'bold' }}>Por favor, verifique se as bibliotecas foram instaladas corretamente ou copie o erro abaixo:</p>
+          <pre style={{ background: '#1e293b', padding: '1rem', borderRadius: '8px', overflowX: 'auto', color: '#f8fafc', fontSize: '14px', marginTop: '10px' }}>
+            {this.state.error && this.state.error.toString()}
+            <br/><br/>
+            {this.state.errorInfo && this.state.errorInfo.componentStack}
+          </pre>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+// --- APP COMPONENT ---
+function NutriTrackApp() {
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -65,7 +113,24 @@ export default function App() {
   const [calcActivity, setCalcActivity] = useState('1.2');
   const [calcGoal, setCalcGoal] = useState('maintain');
 
+  // Inject Tailwind automatically if missing
   useEffect(() => {
+    if (!document.getElementById('tailwind-cdn')) {
+      const script = document.createElement('script');
+      script.id = 'tailwind-cdn';
+      script.src = 'https://cdn.tailwindcss.com';
+      document.head.appendChild(script);
+    }
+  }, []);
+
+  // AUTHENTICATION
+  useEffect(() => {
+    if (!auth) {
+      console.error("Auth module is not initialized.");
+      setIsLoading(false);
+      return;
+    }
+
     const initAuth = async () => {
       try {
         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
@@ -87,238 +152,139 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
+  // DATA LOADING
   useEffect(() => {
-    if (!user) return;
-
+    if (!user || !db) return;
     setIsLoading(true);
     const userId = user.uid;
 
-    // Listeners para Coleções (Sem queries complexas, ordenação feita no JS)
     const mealsRef = collection(db, 'artifacts', appId, 'users', userId, 'meals');
     const unsubMeals = onSnapshot(mealsRef, (snapshot) => {
       const mealsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      // Ordenando do mais recente para o mais antigo no JS
       mealsData.sort((a, b) => b.timestamp - a.timestamp);
       setMeals(mealsData);
-    }, (err) => console.error("Erro ao carregar refeições:", err));
+    });
 
     const weightsRef = collection(db, 'artifacts', appId, 'users', userId, 'weights');
     const unsubWeights = onSnapshot(weightsRef, (snapshot) => {
       const weightsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      // Ordenando do mais recente para o mais antigo no JS
       weightsData.sort((a, b) => b.timestamp - a.timestamp);
       setWeights(weightsData);
-    }, (err) => console.error("Erro ao carregar pesos:", err));
+    });
 
     const waterRef = collection(db, 'artifacts', appId, 'users', userId, 'water');
     const unsubWater = onSnapshot(waterRef, (snapshot) => {
       const waterData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       waterData.sort((a, b) => b.timestamp - a.timestamp);
       setWaterLogs(waterData);
-    }, (err) => console.error("Erro ao carregar água:", err));
+    });
 
     const settingsRef = collection(db, 'artifacts', appId, 'users', userId, 'settings');
     const unsubSettings = onSnapshot(settingsRef, (snapshot) => {
       const settingsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       const profileInfo = settingsData.find(s => s.id === 'profile');
-      if (profileInfo) {
-        setSettings(profileInfo);
-      }
-      setIsLoading(false);
-    }, (err) => {
-      console.error("Erro ao carregar configurações:", err);
+      if (profileInfo) setSettings(profileInfo);
       setIsLoading(false);
     });
 
-    return () => {
-      unsubMeals();
-      unsubWeights();
-      unsubWater();
-      unsubSettings();
-    };
+    return () => { unsubMeals(); unsubWeights(); unsubWater(); unsubSettings(); };
   }, [user]);
 
+  // ACTIONS
   const handleAddMeal = async (e) => {
     e.preventDefault();
-    if (!user || !mealName || !mealCalories) return;
-    
+    if (!user || !db || !mealName || !mealCalories) return;
     try {
-      const mealsRef = collection(db, 'artifacts', appId, 'users', user.uid, 'meals');
-      await addDoc(mealsRef, {
-        name: mealName,
-        calories: Number(mealCalories),
-        timestamp: Date.now()
-      });
-      setMealName('');
-      setMealCalories('');
-    } catch (err) {
-      console.error("Erro ao adicionar refeição", err);
-    }
+      await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'meals'), { name: mealName, calories: Number(mealCalories), timestamp: Date.now() });
+      setMealName(''); setMealCalories('');
+    } catch (err) { console.error(err); }
   };
 
   const handleDeleteMeal = async (id) => {
-    if (!user) return;
-    try {
-      await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'meals', id));
-    } catch (err) {
-      console.error("Erro ao deletar refeição", err);
-    }
+    if (!user || !db) return;
+    try { await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'meals', id)); } catch (err) { console.error(err); }
   };
 
   const handleAddWeight = async (e) => {
     e.preventDefault();
-    if (!user || !weightValue) return;
-    
+    if (!user || !db || !weightValue) return;
     try {
-      const weightsRef = collection(db, 'artifacts', appId, 'users', user.uid, 'weights');
-      await addDoc(weightsRef, {
-        weight: Number(weightValue),
-        timestamp: Date.now()
-      });
+      await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'weights'), { weight: Number(weightValue), timestamp: Date.now() });
       setWeightValue('');
-    } catch (err) {
-      console.error("Erro ao adicionar peso", err);
-    }
+    } catch (err) { console.error(err); }
   };
 
   const handleDeleteWeight = async (id) => {
-    if (!user) return;
-    try {
-      await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'weights', id));
-    } catch (err) {
-      console.error("Erro ao deletar peso", err);
-    }
+    if (!user || !db) return;
+    try { await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'weights', id)); } catch (err) { console.error(err); }
   };
 
   const handleAddWater = async (amountToAdd) => {
-    if (!user || !amountToAdd) return;
+    if (!user || !db || !amountToAdd) return;
     try {
-      const waterRef = collection(db, 'artifacts', appId, 'users', user.uid, 'water');
-      await addDoc(waterRef, {
-        amount: Number(amountToAdd),
-        timestamp: Date.now()
-      });
+      await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'water'), { amount: Number(amountToAdd), timestamp: Date.now() });
       setWaterAmount('');
-    } catch (err) {
-      console.error("Erro ao adicionar água", err);
-    }
+    } catch (err) { console.error(err); }
   };
 
   const handleDeleteWater = async (id) => {
-    if (!user) return;
-    try {
-      await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'water', id));
-    } catch (err) {
-      console.error("Erro ao deletar registro de água", err);
-    }
+    if (!user || !db) return;
+    try { await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'water', id)); } catch (err) { console.error(err); }
   };
 
   const calculateCalories = async (e) => {
     e.preventDefault();
     if (!calcAge || !calcWeight || !calcHeight) return;
-
-    // Fórmula Mifflin-St Jeor
     let bmr = (10 * Number(calcWeight)) + (6.25 * Number(calcHeight)) - (5 * Number(calcAge));
     bmr = calcGender === 'male' ? bmr + 5 : bmr - 161;
-
-    let tdee = bmr * Number(calcActivity);
+    let finalCalories = (bmr * Number(calcActivity)) + (calcGoal === 'lose' ? -500 : calcGoal === 'gain' ? 500 : 0);
     
-    let finalCalories = tdee;
-    if (calcGoal === 'lose') finalCalories -= 500;
-    if (calcGoal === 'gain') finalCalories += 500;
-
-    const roundedCalories = Math.round(finalCalories);
-
-    if (user) {
+    if (user && db) {
       try {
-        const profileRef = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'profile');
-        await setDoc(profileRef, { calorieGoal: roundedCalories }, { merge: true });
+        await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'profile'), { calorieGoal: Math.round(finalCalories) }, { merge: true });
         setActiveTab('dashboard');
-      } catch (err) {
-        console.error("Erro ao salvar meta", err);
-      }
+      } catch (err) { console.error(err); }
     }
   };
 
-  // Calcular calorias de hoje
-  const todayMeals = useMemo(() => {
-    const today = new Date().setHours(0, 0, 0, 0);
-    return meals.filter(meal => {
-      const mealDate = new Date(meal.timestamp).setHours(0, 0, 0, 0);
-      return mealDate === today;
-    });
-  }, [meals]);
-
+  // CALCULATIONS
+  const todayMeals = useMemo(() => meals.filter(m => new Date(m.timestamp).setHours(0,0,0,0) === new Date().setHours(0,0,0,0)), [meals]);
   const caloriesConsumedToday = todayMeals.reduce((acc, meal) => acc + meal.calories, 0);
   const calorieGoal = settings?.calorieGoal || 2000;
   const caloriePercentage = Math.min((caloriesConsumedToday / calorieGoal) * 100, 100);
 
-  const todayWaterLogs = useMemo(() => {
-    const today = new Date().setHours(0, 0, 0, 0);
-    return waterLogs.filter(log => {
-      const logDate = new Date(log.timestamp).setHours(0, 0, 0, 0);
-      return logDate === today;
-    });
-  }, [waterLogs]);
-
+  const todayWaterLogs = useMemo(() => waterLogs.filter(w => new Date(w.timestamp).setHours(0,0,0,0) === new Date().setHours(0,0,0,0)), [waterLogs]);
   const waterConsumedToday = todayWaterLogs.reduce((acc, log) => acc + log.amount, 0);
   const waterGoal = settings?.waterGoal || 2500;
   const waterPercentage = Math.min((waterConsumedToday / waterGoal) * 100, 100);
 
-  // Dados do gráfico de peso (Cronológico)
-  const weightChartData = useMemo(() => {
-    const sorted = [...weights].sort((a, b) => a.timestamp - b.timestamp);
-    return sorted.map(w => ({
-      date: new Date(w.timestamp).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
-      peso: w.weight
-    }));
-  }, [weights]);
-
+  const weightChartData = useMemo(() => [...weights].sort((a, b) => a.timestamp - b.timestamp).map(w => ({
+    date: new Date(w.timestamp).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }), peso: w.weight
+  })), [weights]);
   const currentWeight = weights.length > 0 ? weights[0].weight : '--';
 
+  // RENDER HELPERS
   const renderDashboard = () => (
     <div className="space-y-6 animate-fade-in">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        
-        {/* Calorie Card */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center relative overflow-hidden">
-          <div className="absolute top-4 left-4 text-emerald-500">
-            <Activity size={24} />
-          </div>
-          <h3 className="text-slate-500 text-sm font-medium mb-4 mt-2">Calorias Consumidas (Hoje)</h3>
-          
+          <div className="absolute top-4 left-4 text-emerald-500"><Activity size={24} /></div>
+          <h3 className="text-slate-500 text-sm font-medium mb-4 mt-2">Calorias (Hoje)</h3>
           <div className="relative w-32 h-32 flex items-center justify-center">
             <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-              <path
-                className="text-slate-100"
-                strokeWidth="3"
-                stroke="currentColor"
-                fill="none"
-                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-              />
-              <path
-                className={`${caloriePercentage > 100 ? 'text-rose-500' : 'text-emerald-500'} transition-all duration-1000 ease-out`}
-                strokeWidth="3"
-                strokeDasharray={`${caloriePercentage}, 100`}
-                strokeLinecap="round"
-                stroke="currentColor"
-                fill="none"
-                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-              />
+              <path className="text-slate-100" strokeWidth="3" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              <path className={`${caloriePercentage > 100 ? 'text-rose-500' : 'text-emerald-500'} transition-all duration-1000 ease-out`} strokeWidth="3" strokeDasharray={`${caloriePercentage}, 100`} strokeLinecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
             </svg>
             <div className="absolute flex flex-col items-center">
               <span className="text-2xl font-bold text-slate-800">{caloriesConsumedToday}</span>
-              <span className="text-xs text-slate-400">/ {calorieGoal} kcal</span>
+              <span className="text-xs text-slate-400">/ {calorieGoal}</span>
             </div>
           </div>
         </div>
 
-        {/* Weight Card */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
           <div className="flex items-center justify-between mb-4">
-             <div className="p-2 bg-blue-50 text-blue-500 rounded-lg">
-                <Scale size={24} />
-             </div>
+             <div className="p-2 bg-blue-50 text-blue-500 rounded-lg"><Scale size={24} /></div>
              <span className="text-xs font-medium px-2 py-1 bg-slate-100 text-slate-600 rounded-full">Atual</span>
           </div>
           <div>
@@ -331,29 +297,12 @@ export default function App() {
         </div>
 
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center relative overflow-hidden">
-          <div className="absolute top-4 left-4 text-cyan-500">
-            <Droplet size={24} />
-          </div>
+          <div className="absolute top-4 left-4 text-cyan-500"><Droplet size={24} /></div>
           <h3 className="text-slate-500 text-sm font-medium mb-4 mt-2">Água (Hoje)</h3>
-          
           <div className="relative w-32 h-32 flex items-center justify-center">
             <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-              <path
-                className="text-slate-100"
-                strokeWidth="3"
-                stroke="currentColor"
-                fill="none"
-                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-              />
-              <path
-                className="text-cyan-500 transition-all duration-1000 ease-out"
-                strokeWidth="3"
-                strokeDasharray={`${waterPercentage}, 100`}
-                strokeLinecap="round"
-                stroke="currentColor"
-                fill="none"
-                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-              />
+              <path className="text-slate-100" strokeWidth="3" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              <path className="text-cyan-500 transition-all duration-1000 ease-out" strokeWidth="3" strokeDasharray={`${waterPercentage}, 100`} strokeLinecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
             </svg>
             <div className="absolute flex flex-col items-center">
               <span className="text-xl font-bold text-slate-800">{waterConsumedToday}</span>
@@ -362,23 +311,16 @@ export default function App() {
           </div>
         </div>
 
-        {/* Quick Add Meal */}
         <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-6 rounded-2xl shadow-sm text-white flex flex-col justify-center cursor-pointer transition-transform hover:scale-[1.02]" onClick={() => setActiveTab('meals')}>
-           <div className="bg-white/20 w-12 h-12 rounded-full flex items-center justify-center mb-4">
-             <Plus size={24} className="text-white" />
-           </div>
+           <div className="bg-white/20 w-12 h-12 rounded-full flex items-center justify-center mb-4"><Plus size={24} /></div>
            <h3 className="text-lg font-bold mb-1">Nova Refeição</h3>
-           <p className="text-emerald-100 text-sm">Registre o que você comeu agora mesmo.</p>
+           <p className="text-emerald-100 text-sm">Registre o que você comeu agora.</p>
         </div>
       </div>
 
-      {/* Mini Weight Chart */}
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-        <div className="flex items-center gap-2 mb-6">
-          <TrendingUp className="text-blue-500" size={20} />
-          <h3 className="text-slate-800 font-bold">Evolução de Peso</h3>
-        </div>
-        <div className="h-64 w-full">
+        <div className="flex items-center gap-2 mb-6"><TrendingUp className="text-blue-500" size={20} /><h3 className="text-slate-800 font-bold">Evolução de Peso</h3></div>
+        <div className="h-64 w-full" style={{ minHeight: '256px' }}>
           {weightChartData.length > 1 ? (
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={weightChartData}>
@@ -391,18 +333,12 @@ export default function App() {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis dataKey="date" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
                 <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} domain={['dataMin - 2', 'dataMax + 2']} />
-                <Tooltip 
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  itemStyle={{ color: '#3b82f6', fontWeight: 'bold' }}
-                />
+                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} itemStyle={{ color: '#3b82f6', fontWeight: 'bold' }} />
                 <Area type="monotone" dataKey="peso" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorPeso)" />
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-             <div className="h-full flex items-center justify-center text-slate-400 flex-col gap-2">
-               <Scale size={32} className="opacity-20" />
-               <p>Registre mais de um peso para ver o gráfico.</p>
-             </div>
+             <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-2"><Scale size={32} className="opacity-20" /><p>Registre mais de um peso para ver o gráfico.</p></div>
           )}
         </div>
       </div>
@@ -412,66 +348,21 @@ export default function App() {
   const renderMeals = () => (
     <div className="space-y-6 animate-fade-in">
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-        <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
-          <Apple className="text-emerald-500" /> Registrar Refeição
-        </h2>
+        <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2"><Apple className="text-emerald-500" /> Registrar Refeição</h2>
         <form onSubmit={handleAddMeal} className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-slate-500 mb-1">Alimento / Refeição</label>
-            <input 
-              type="text" 
-              required
-              placeholder="Ex: Frango com batata doce"
-              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all"
-              value={mealName}
-              onChange={(e) => setMealName(e.target.value)}
-            />
-          </div>
-          <div className="md:w-48">
-            <label className="block text-sm font-medium text-slate-500 mb-1">Calorias (kcal)</label>
-            <input 
-              type="number" 
-              required
-              min="1"
-              placeholder="Ex: 450"
-              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all"
-              value={mealCalories}
-              onChange={(e) => setMealCalories(e.target.value)}
-            />
-          </div>
-          <div className="flex items-end">
-            <button type="submit" className="w-full md:w-auto bg-emerald-500 hover:bg-emerald-600 text-white font-medium p-3 rounded-xl flex items-center justify-center gap-2 transition-colors">
-              <Plus size={20} /> Adicionar
-            </button>
-          </div>
+          <div className="flex-1"><label className="block text-sm font-medium text-slate-500 mb-1">Alimento</label><input type="text" required className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl" value={mealName} onChange={e => setMealName(e.target.value)} /></div>
+          <div className="md:w-48"><label className="block text-sm font-medium text-slate-500 mb-1">Calorias</label><input type="number" required min="1" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl" value={mealCalories} onChange={e => setMealCalories(e.target.value)} /></div>
+          <div className="flex items-end"><button type="submit" className="w-full md:w-auto bg-emerald-500 text-white p-3 rounded-xl flex items-center justify-center gap-2"><Plus size={20} /> Adicionar</button></div>
         </form>
       </div>
-
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-        <h3 className="text-lg font-bold text-slate-800 mb-4">Histórico de Refeições</h3>
-        {meals.length === 0 ? (
-          <div className="text-center py-8 text-slate-400">Nenhuma refeição registrada ainda.</div>
-        ) : (
-          <div className="space-y-3">
-            {meals.map(meal => (
-              <div key={meal.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100 hover:border-slate-200 transition-colors">
-                <div>
-                  <h4 className="font-medium text-slate-800">{meal.name}</h4>
-                  <p className="text-sm text-slate-500 flex items-center gap-1 mt-1">
-                    <Calendar size={14} /> 
-                    {new Date(meal.timestamp).toLocaleDateString('pt-BR')} às {new Date(meal.timestamp).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}
-                  </p>
-                </div>
-                <div className="flex items-center gap-4">
-                  <span className="font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">{meal.calories} kcal</span>
-                  <button onClick={() => handleDeleteMeal(meal.id)} className="text-slate-400 hover:text-rose-500 transition-colors p-2 rounded-lg hover:bg-rose-50">
-                    <Trash2 size={18} />
-                  </button>
-                </div>
-              </div>
-            ))}
+        <h3 className="text-lg font-bold text-slate-800 mb-4">Histórico</h3>
+        {meals.length === 0 ? <div className="text-center py-8 text-slate-400">Vazio.</div> : <div className="space-y-3">{meals.map(m => (
+          <div key={m.id} className="flex justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
+            <div><h4 className="font-medium text-slate-800">{m.name}</h4><p className="text-sm text-slate-500">{new Date(m.timestamp).toLocaleString('pt-BR')}</p></div>
+            <div className="flex items-center gap-4"><span className="text-emerald-600 font-bold">{m.calories} kcal</span><button onClick={() => handleDeleteMeal(m.id)} className="text-slate-400 hover:text-rose-500"><Trash2 size={18}/></button></div>
           </div>
-        )}
+        ))}</div>}
       </div>
     </div>
   );
@@ -479,53 +370,20 @@ export default function App() {
   const renderWeight = () => (
     <div className="space-y-6 animate-fade-in">
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-        <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
-          <Scale className="text-blue-500" /> Registrar Peso
-        </h2>
+        <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2"><Scale className="text-blue-500" /> Registrar Peso</h2>
         <form onSubmit={handleAddWeight} className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-slate-500 mb-1">Peso (kg)</label>
-            <input 
-              type="number" 
-              required
-              step="0.1"
-              min="1"
-              placeholder="Ex: 75.5"
-              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
-              value={weightValue}
-              onChange={(e) => setWeightValue(e.target.value)}
-            />
-          </div>
-          <div className="flex items-end">
-            <button type="submit" className="w-full md:w-auto bg-blue-500 hover:bg-blue-600 text-white font-medium p-3 rounded-xl flex items-center justify-center gap-2 transition-colors">
-              <Plus size={20} /> Adicionar
-            </button>
-          </div>
+          <div className="flex-1"><label className="block text-sm font-medium text-slate-500 mb-1">Peso (kg)</label><input type="number" required step="0.1" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl" value={weightValue} onChange={e => setWeightValue(e.target.value)} /></div>
+          <div className="flex items-end"><button type="submit" className="w-full md:w-auto bg-blue-500 text-white p-3 rounded-xl flex items-center justify-center gap-2"><Plus size={20} /> Adicionar</button></div>
         </form>
       </div>
-
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-        <h3 className="text-lg font-bold text-slate-800 mb-4">Histórico de Peso</h3>
-        {weights.length === 0 ? (
-          <div className="text-center py-8 text-slate-400">Nenhum peso registrado ainda.</div>
-        ) : (
-          <div className="space-y-3">
-            {weights.map(w => (
-              <div key={w.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
-                <div>
-                  <h4 className="font-bold text-slate-800 text-lg">{w.weight} kg</h4>
-                  <p className="text-sm text-slate-500 flex items-center gap-1 mt-1">
-                    <Calendar size={14} /> 
-                    {new Date(w.timestamp).toLocaleDateString('pt-BR')} às {new Date(w.timestamp).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}
-                  </p>
-                </div>
-                <button onClick={() => handleDeleteWeight(w.id)} className="text-slate-400 hover:text-rose-500 transition-colors p-2 rounded-lg hover:bg-rose-50">
-                  <Trash2 size={18} />
-                </button>
-              </div>
-            ))}
+        <h3 className="text-lg font-bold text-slate-800 mb-4">Histórico</h3>
+        {weights.length === 0 ? <div className="text-center py-8 text-slate-400">Vazio.</div> : <div className="space-y-3">{weights.map(w => (
+          <div key={w.id} className="flex justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
+            <div><h4 className="font-bold text-lg">{w.weight} kg</h4><p className="text-sm text-slate-500">{new Date(w.timestamp).toLocaleString('pt-BR')}</p></div>
+            <button onClick={() => handleDeleteWeight(w.id)} className="text-slate-400 hover:text-rose-500"><Trash2 size={18}/></button>
           </div>
-        )}
+        ))}</div>}
       </div>
     </div>
   );
@@ -533,211 +391,97 @@ export default function App() {
   const renderWater = () => (
     <div className="space-y-6 animate-fade-in">
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-        <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
-          <Droplet className="text-cyan-500" /> Registrar Água
-        </h2>
+        <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2"><Droplet className="text-cyan-500" /> Registrar Água</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <button onClick={() => handleAddWater(200)} className="flex flex-col items-center justify-center p-4 bg-cyan-50 hover:bg-cyan-100 text-cyan-700 rounded-xl transition-colors border border-cyan-100">
-            <Droplet size={24} className="mb-2" />
-            <span className="font-bold">200 ml</span>
-            <span className="text-xs opacity-70">Copo Padrão</span>
-          </button>
-          <button onClick={() => handleAddWater(350)} className="flex flex-col items-center justify-center p-4 bg-cyan-50 hover:bg-cyan-100 text-cyan-700 rounded-xl transition-colors border border-cyan-100">
-            <Droplet size={28} className="mb-2" />
-            <span className="font-bold">350 ml</span>
-            <span className="text-xs opacity-70">Caneca</span>
-          </button>
-          <button onClick={() => handleAddWater(500)} className="flex flex-col items-center justify-center p-4 bg-cyan-50 hover:bg-cyan-100 text-cyan-700 rounded-xl transition-colors border border-cyan-100">
-            <Droplet size={32} className="mb-2" />
-            <span className="font-bold">500 ml</span>
-            <span className="text-xs opacity-70">Garrafinha</span>
-          </button>
-          <div className="flex flex-col justify-end">
-             <div className="flex items-center gap-2">
-               <input type="number" placeholder="Outro (ml)" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:outline-none" value={waterAmount} onChange={(e) => setWaterAmount(e.target.value)} />
-               <button onClick={() => handleAddWater(waterAmount)} className="bg-cyan-500 hover:bg-cyan-600 text-white p-3 rounded-xl transition-colors">
-                 <Plus size={20} />
-               </button>
-             </div>
-          </div>
+          <button onClick={() => handleAddWater(200)} className="p-4 bg-cyan-50 text-cyan-700 rounded-xl font-bold">200 ml</button>
+          <button onClick={() => handleAddWater(350)} className="p-4 bg-cyan-50 text-cyan-700 rounded-xl font-bold">350 ml</button>
+          <button onClick={() => handleAddWater(500)} className="p-4 bg-cyan-50 text-cyan-700 rounded-xl font-bold">500 ml</button>
+          <div className="flex items-center gap-2"><input type="number" placeholder="Outro" className="w-full p-3 bg-slate-50 border rounded-xl" value={waterAmount} onChange={e => setWaterAmount(e.target.value)} /><button onClick={() => handleAddWater(waterAmount)} className="bg-cyan-500 text-white p-3 rounded-xl"><Plus size={20}/></button></div>
         </div>
       </div>
-      
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-        <h3 className="text-lg font-bold text-slate-800 mb-4">Histórico de Água (Hoje)</h3>
-        {todayWaterLogs.length === 0 ? (
-          <div className="text-center py-8 text-slate-400">Nenhuma água registrada hoje.</div>
-        ) : (
-          <div className="space-y-3">
-            {todayWaterLogs.map(log => (
-              <div key={log.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
-                <div>
-                  <h4 className="font-bold text-slate-800 text-lg">{log.amount} ml</h4>
-                  <p className="text-sm text-slate-500 flex items-center gap-1 mt-1">
-                    <Calendar size={14} /> 
-                    {new Date(log.timestamp).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}
-                  </p>
-                </div>
-                <button onClick={() => handleDeleteWater(log.id)} className="text-slate-400 hover:text-rose-500 transition-colors p-2 rounded-lg hover:bg-rose-50">
-                  <Trash2 size={18} />
-                </button>
-              </div>
-            ))}
+        <h3 className="text-lg font-bold text-slate-800 mb-4">Histórico (Hoje)</h3>
+        {todayWaterLogs.length === 0 ? <div className="text-center py-8 text-slate-400">Vazio.</div> : <div className="space-y-3">{todayWaterLogs.map(l => (
+          <div key={l.id} className="flex justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
+            <div><h4 className="font-bold text-lg">{l.amount} ml</h4><p className="text-sm text-slate-500">{new Date(l.timestamp).toLocaleTimeString('pt-BR')}</p></div>
+            <button onClick={() => handleDeleteWater(l.id)} className="text-slate-400 hover:text-rose-500"><Trash2 size={18}/></button>
           </div>
-        )}
+        ))}</div>}
       </div>
     </div>
   );
 
   const renderCalculator = () => (
-    <div className="animate-fade-in max-w-3xl mx-auto">
-      <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-3 bg-indigo-50 text-indigo-500 rounded-xl">
-             <CalcIcon size={28} />
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-slate-800">Calculadora de Calorias</h2>
-            <p className="text-slate-500 text-sm mt-1">Descubra sua meta diária baseada no seu perfil.</p>
+    <div className="animate-fade-in max-w-3xl mx-auto bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+      <div className="flex items-center gap-3 mb-6"><div className="p-3 bg-indigo-50 text-indigo-500 rounded-xl"><CalcIcon size={28} /></div><h2 className="text-2xl font-bold">Calculadora</h2></div>
+      <form onSubmit={calculateCalories} className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div><label className="block text-sm font-medium mb-2">Gênero</label><select className="w-full p-3 border rounded-xl" value={calcGender} onChange={e => setCalcGender(e.target.value)}><option value="male">Masculino</option><option value="female">Feminino</option></select></div>
+          <div><label className="block text-sm font-medium mb-2">Idade</label><input type="number" required className="w-full p-3 border rounded-xl" value={calcAge} onChange={e => setCalcAge(e.target.value)} /></div>
+          <div><label className="block text-sm font-medium mb-2">Peso (kg)</label><input type="number" required className="w-full p-3 border rounded-xl" value={calcWeight} onChange={e => setCalcWeight(e.target.value)} /></div>
+          <div><label className="block text-sm font-medium mb-2">Altura (cm)</label><input type="number" required className="w-full p-3 border rounded-xl" value={calcHeight} onChange={e => setCalcHeight(e.target.value)} /></div>
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-2">Atividade</label>
+          <select className="w-full p-3 border rounded-xl" value={calcActivity} onChange={e => setCalcActivity(e.target.value)}>
+            <option value="1.2">Sedentário</option><option value="1.375">Leve</option><option value="1.55">Moderado</option><option value="1.725">Intenso</option><option value="1.9">Muito Intenso</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-2">Objetivo</label>
+          <div className="grid grid-cols-3 gap-3">
+            <button type="button" onClick={() => setCalcGoal('lose')} className={`p-3 rounded-xl border ${calcGoal === 'lose' ? 'bg-indigo-50 border-indigo-500 text-indigo-700' : 'bg-white'}`}>Perder</button>
+            <button type="button" onClick={() => setCalcGoal('maintain')} className={`p-3 rounded-xl border ${calcGoal === 'maintain' ? 'bg-indigo-50 border-indigo-500 text-indigo-700' : 'bg-white'}`}>Manter</button>
+            <button type="button" onClick={() => setCalcGoal('gain')} className={`p-3 rounded-xl border ${calcGoal === 'gain' ? 'bg-indigo-50 border-indigo-500 text-indigo-700' : 'bg-white'}`}>Ganhar</button>
           </div>
         </div>
-
-        <form onSubmit={calculateCalories} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Gênero</label>
-              <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none" value={calcGender} onChange={(e) => setCalcGender(e.target.value)}>
-                <option value="male">Masculino</option>
-                <option value="female">Feminino</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Idade</label>
-              <input type="number" required min="10" max="120" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none" value={calcAge} onChange={(e) => setCalcAge(e.target.value)} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Peso (kg)</label>
-              <input type="number" required step="0.1" min="30" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none" value={calcWeight} onChange={(e) => setCalcWeight(e.target.value)} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Altura (cm)</label>
-              <input type="number" required min="100" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none" value={calcHeight} onChange={(e) => setCalcHeight(e.target.value)} />
-            </div>
-          </div>
-
-          <div>
-             <label className="block text-sm font-medium text-slate-700 mb-2">Nível de Atividade</label>
-             <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none" value={calcActivity} onChange={(e) => setCalcActivity(e.target.value)}>
-                <option value="1.2">Sedentário (pouco ou nenhum exercício)</option>
-                <option value="1.375">Levemente ativo (exercício leve 1 a 3 dias/semana)</option>
-                <option value="1.55">Moderadamente ativo (exercício moderado 3 a 5 dias/semana)</option>
-                <option value="1.725">Muito ativo (exercício pesado 6 a 7 dias/semana)</option>
-                <option value="1.9">Extremamente ativo (trabalho físico ou treino intenso 2x/dia)</option>
-              </select>
-          </div>
-
-          <div>
-             <label className="block text-sm font-medium text-slate-700 mb-2">Objetivo</label>
-             <div className="grid grid-cols-3 gap-3">
-               <button type="button" onClick={() => setCalcGoal('lose')} className={`p-3 rounded-xl border font-medium transition-all ${calcGoal === 'lose' ? 'bg-indigo-50 border-indigo-500 text-indigo-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>Perder Peso</button>
-               <button type="button" onClick={() => setCalcGoal('maintain')} className={`p-3 rounded-xl border font-medium transition-all ${calcGoal === 'maintain' ? 'bg-indigo-50 border-indigo-500 text-indigo-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>Manter</button>
-               <button type="button" onClick={() => setCalcGoal('gain')} className={`p-3 rounded-xl border font-medium transition-all ${calcGoal === 'gain' ? 'bg-indigo-50 border-indigo-500 text-indigo-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>Ganhar Massa</button>
-             </div>
-          </div>
-
-          <div className="pt-4 border-t border-slate-100">
-            <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-md shadow-indigo-200">
-              <Target size={20} /> Calcular e Salvar Meta Diária
-            </button>
-          </div>
-        </form>
-      </div>
+        <button type="submit" className="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl">Salvar Meta</button>
+      </form>
     </div>
   );
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
-      </div>
-    );
-  }
+  if (isLoading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div></div>;
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Home },
     { id: 'meals', label: 'Refeições', icon: Apple },
     { id: 'water', label: 'Água', icon: Droplet },
     { id: 'weight', label: 'Peso', icon: Scale },
-    { id: 'calculator', label: 'Calculadora', icon: CalcIcon },
+    { id: 'calculator', label: 'Calculadora', icon: CalcIcon }
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row font-sans text-slate-800 selection:bg-emerald-100 selection:text-emerald-900">
-      
-      {/* Mobile Header */}
-      <div className="md:hidden bg-white border-b border-slate-200 p-4 flex items-center justify-between sticky top-0 z-20">
-        <div className="flex items-center gap-2 text-emerald-600 font-black text-xl tracking-tight">
-          <Activity size={24} strokeWidth={3} /> NutriTrack
-        </div>
-        <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 text-slate-500">
-          {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
+    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row font-sans text-slate-800">
+      <div className="md:hidden bg-white p-4 flex justify-between items-center border-b">
+        <div className="flex gap-2 text-emerald-600 font-black text-xl"><Activity /> NutriTrack</div>
+        <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}><Menu /></button>
       </div>
-
-      {/* Sidebar Navigation */}
-      <nav className={`
-        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} 
-        md:translate-x-0 transition-transform duration-300 ease-in-out
-        fixed md:static inset-y-0 left-0 z-10 w-64 bg-white border-r border-slate-200 shadow-xl md:shadow-none
-        flex flex-col
-      `}>
-        <div className="hidden md:flex p-6 items-center gap-2 text-emerald-600 font-black text-2xl tracking-tight border-b border-slate-100">
-          <Activity size={28} strokeWidth={3} /> NutriTrack
+      <nav className={`${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 fixed md:static inset-y-0 left-0 w-64 bg-white border-r z-20 flex flex-col transition-transform`}>
+        <div className="hidden md:flex p-6 gap-2 text-emerald-600 font-black text-2xl border-b"><Activity /> NutriTrack</div>
+        <div className="flex-1 p-4 space-y-2">
+          {navItems.map(item => (
+            <button key={item.id} onClick={() => { setActiveTab(item.id); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 p-3 rounded-xl font-medium ${activeTab === item.id ? 'bg-emerald-50 text-emerald-700' : 'text-slate-500 hover:bg-slate-50'}`}>
+              <item.icon size={20} /> {item.label}
+            </button>
+          ))}
         </div>
-        <div className="flex-1 py-6 px-4 space-y-2 overflow-y-auto">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeTab === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => { setActiveTab(item.id); setIsMobileMenuOpen(false); }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium ${
-                  isActive 
-                    ? 'bg-emerald-50 text-emerald-700 shadow-sm' 
-                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
-                }`}
-              >
-                <Icon size={20} className={isActive ? 'text-emerald-500' : 'text-slate-400'} />
-                {item.label}
-              </button>
-            )
-          })}
-        </div>
-        <div className="p-4 border-t border-slate-100">
-          <div className="bg-slate-50 p-4 rounded-xl">
-             <p className="text-xs text-slate-500 font-medium mb-1">Meta Diária</p>
-             <p className="text-lg font-bold text-slate-800">{calorieGoal} <span className="text-sm font-normal text-slate-500">kcal</span></p>
-          </div>
-        </div>
+        <div className="p-4 border-t"><div className="bg-slate-50 p-4 rounded-xl"><p className="text-xs text-slate-500">Meta</p><p className="font-bold">{calorieGoal} kcal</p></div></div>
       </nav>
-
-      {/* Main Content Area */}
-      <main className="flex-1 p-4 md:p-8 overflow-y-auto w-full max-w-6xl mx-auto">
-        <header className="mb-8 hidden md:block">
-          <h1 className="text-3xl font-bold text-slate-800">
-            {navItems.find(i => i.id === activeTab)?.label}
-          </h1>
-          <p className="text-slate-500 mt-1">Acompanhe seu progresso e mantenha-se saudável.</p>
-        </header>
-
+      <main className="flex-1 p-4 md:p-8 overflow-y-auto max-w-6xl mx-auto w-full">
         {activeTab === 'dashboard' && renderDashboard()}
         {activeTab === 'meals' && renderMeals()}
         {activeTab === 'water' && renderWater()}
         {activeTab === 'weight' && renderWeight()}
         {activeTab === 'calculator' && renderCalculator()}
       </main>
-
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <NutriTrackApp />
+    </ErrorBoundary>
   );
 }
