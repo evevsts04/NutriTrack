@@ -29,7 +29,13 @@
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans antialiased selection:bg-emerald-100 selection:text-emerald-900 min-h-screen flex flex-col md:flex-row">
 
-    <div id="auth-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-50">
+    <!-- Loading Spinner Inicial -->
+    <div id="loading-screen" class="fixed inset-0 bg-slate-50 z-[100] flex flex-col items-center justify-center">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mb-4"></div>
+        <p class="text-slate-500 font-medium">Carregando seus dados...</p>
+    </div>
+
+    <div id="auth-screen" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-50">
         <div class="bg-white p-8 rounded-3xl shadow-lg border border-slate-100 w-full max-w-md mx-4 animate-fade-in">
             <div class="flex items-center justify-center gap-2 text-emerald-600 font-black text-3xl mb-8 tracking-tight">
                 <i data-lucide="activity" class="w-8 h-8"></i> NutriTrack
@@ -45,7 +51,6 @@
                     <label class="block text-sm font-medium text-slate-700 mb-1">Senha</label>
                     <input type="password" id="auth-pass" required placeholder="••••••••" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none">
                 </div>
-                <div id="auth-error" class="text-rose-500 text-sm hidden text-center bg-rose-50 p-2 rounded-lg"></div>
                 <button type="submit" id="auth-submit-btn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow-md transition-all">Entrar</button>
             </form>
             
@@ -56,12 +61,12 @@
     </div>
 
     <!-- Mobile Header -->
-    <div class="md:hidden bg-white border-b border-slate-200 p-4 flex items-center justify-between sticky top-0 z-20">
+    <div class="md:hidden bg-white border-b border-slate-200 p-4 flex items-center justify-between sticky top-0 z-20 shadow-sm">
         <div class="flex items-center gap-2 text-emerald-600 font-black text-xl tracking-tight">
             <i data-lucide="activity"></i> NutriTrack
         </div>
-        <button id="mobile-menu-btn" onclick="toggleMenu()" class="p-2 text-slate-500">
-            <i data-lucide="menu" id="menu-icon"></i>
+        <button onclick="toggleMenu()" class="p-2 text-slate-500 bg-slate-50 rounded-lg">
+            <i data-lucide="menu"></i>
         </button>
     </div>
 
@@ -85,7 +90,7 @@
                 <i data-lucide="scale"></i> Peso
             </button>
             <button onclick="switchTab('calculator')" id="nav-calculator" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-800">
-                <i data-lucide="calculator"></i> Calculadora e API
+                <i data-lucide="calculator"></i> Calculadora de Metas
             </button>
         </div>
         
@@ -106,11 +111,6 @@
     <!-- Main Content Area -->
     <main class="flex-1 p-4 md:p-8 overflow-y-auto w-full max-w-6xl mx-auto relative">
         
-        <!-- Loading Spinner -->
-        <div id="loading-screen" class="absolute inset-0 bg-slate-50 z-10 flex items-center justify-center">
-            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
-        </div>
-
         <!-- VIEW: DASHBOARD -->
         <div id="view-dashboard" class="view-section active">
             <header class="mb-8 hidden md:block">
@@ -135,11 +135,11 @@
                     </div>
                 </div>
 
-                <!-- Macros do Dia (NOVO) -->
+                <!-- Macros do Dia -->
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-center">
                     <div class="flex items-center justify-between mb-3">
                         <div class="p-2 bg-amber-50 text-amber-500 rounded-lg"><i data-lucide="pie-chart"></i></div>
-                        <span class="text-xs font-medium px-2 py-1 bg-slate-100 text-slate-600 rounded-full">IA Macros</span>
+                        <span class="text-xs font-medium px-2 py-1 bg-slate-100 text-slate-600 rounded-full">Estimativa IA</span>
                     </div>
                     <h3 class="text-slate-500 text-sm font-medium mb-3">Nutrientes de Hoje</h3>
                     <div class="space-y-2 text-sm font-medium">
@@ -228,17 +228,15 @@
                     </div>
                     
                     <div class="flex flex-col md:flex-row items-center gap-3 pt-2">
-                        <!-- Botão Padrão (Adicionar/Atualizar) -->
                         <button type="submit" id="btn-submit-meal" class="w-full md:w-auto bg-slate-800 hover:bg-slate-900 text-white font-medium px-6 py-3 rounded-xl flex items-center justify-center gap-2 transition-colors">
                             <i data-lucide="plus" class="w-5 h-5"></i> Salvar Manual
                         </button>
                         
-                        <!-- Botão IA (NOVO) -->
+                        <!-- Botão Inteligência Artificial -->
                         <button type="button" id="btn-ai-add" onclick="addMealWithAI()" class="w-full md:w-auto bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-medium px-6 py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md">
                             <i data-lucide="sparkles" class="w-5 h-5"></i> Analisar Macros com IA
                         </button>
 
-                        <!-- Botão Cancelar Edição (Oculto por padrão) -->
                         <button type="button" id="btn-cancel-edit" onclick="cancelEdit()" class="hidden w-full md:w-auto bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium px-6 py-3 rounded-xl flex items-center justify-center gap-2 transition-colors">
                             Cancelar
                         </button>
@@ -254,7 +252,7 @@
             </div>
         </div>
 
-        <!-- VIEW: WATER (Mantido igual) -->
+        <!-- VIEW: WATER -->
         <div id="view-water" class="view-section">
             <header class="mb-8 hidden md:block">
                 <h1 class="text-3xl font-bold text-slate-800">Água</h1>
@@ -288,7 +286,7 @@
             </div>
         </div>
 
-        <!-- VIEW: WEIGHT (Mantido igual) -->
+        <!-- VIEW: WEIGHT -->
         <div id="view-weight" class="view-section">
             <header class="mb-8 hidden md:block">
                 <h1 class="text-3xl font-bold text-slate-800">Peso</h1>
@@ -313,41 +311,41 @@
             </div>
         </div>
 
-        <!-- VIEW: CALCULATOR (Mantido igual) -->
+        <!-- VIEW: CALCULATOR -->
         <div id="view-calculator" class="view-section">
             <header class="mb-8 hidden md:block">
-                <h1 class="text-3xl font-bold text-slate-800">Calculadora e Perfil</h1>
+                <h1 class="text-3xl font-bold text-slate-800">Calculadora de Metas</h1>
             </header>
             <div class="max-w-3xl mx-auto bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
                 <div class="flex items-center gap-3 mb-6">
                     <div class="p-3 bg-indigo-50 text-indigo-500 rounded-xl"><i data-lucide="calculator"></i></div>
                     <div>
-                        <h2 class="text-2xl font-bold text-slate-800">Seu Perfil e Metas</h2>
-                        <p class="text-slate-500 text-sm mt-1">Configure seus dados para calcularmos suas metas ideais.</p>
+                        <h2 class="text-2xl font-bold text-slate-800">Seu Perfil de Saúde</h2>
+                        <p class="text-slate-500 text-sm mt-1">Configure seus dados para calcularmos suas metas diárias.</p>
                     </div>
                 </div>
                 <form id="form-calc" class="space-y-6">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label class="block text-sm font-medium text-slate-700 mb-2">Gênero</label>
-                            <select id="calc-gender" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none"><option value="male">Masculino</option><option value="female">Feminino</option></select>
+                            <select id="calc-gender" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"><option value="male">Masculino</option><option value="female">Feminino</option></select>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-slate-700 mb-2">Idade</label>
-                            <input type="number" id="calc-age" required min="1" placeholder="Ex: 30" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none">
+                            <input type="number" id="calc-age" required min="1" placeholder="Ex: 30" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-slate-700 mb-2">Peso Inicial (kg)</label>
-                            <input type="number" id="calc-weight" required step="0.1" min="1" placeholder="Ex: 75.5" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none">
+                            <input type="number" id="calc-weight" required step="0.1" min="1" placeholder="Ex: 75.5" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-slate-700 mb-2">Altura (cm)</label>
-                            <input type="number" id="calc-height" required min="50" placeholder="Ex: 175" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none">
+                            <input type="number" id="calc-height" required min="50" placeholder="Ex: 175" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500">
                         </div>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-2">Nível de Atividade Física</label>
-                        <select id="calc-activity" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none">
+                        <select id="calc-activity" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500">
                             <option value="1.2">Sedentário</option><option value="1.375">Leve</option><option value="1.55">Moderado</option><option value="1.725">Intenso</option><option value="1.9">Muito Intenso</option>
                         </select>
                     </div>
@@ -363,22 +361,6 @@
                         <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl shadow-md transition-all flex justify-center items-center gap-2"><i data-lucide="save"></i> Salvar Perfil e Calcular Metas</button>
                     </div>
                 </form>
-
-                <div class="mt-10 pt-8 border-t border-slate-200">
-                    <div class="flex items-center gap-3 mb-6">
-                        <div class="p-3 bg-amber-50 text-amber-500 rounded-xl"><i data-lucide="key"></i></div>
-                        <div>
-                            <h2 class="text-xl font-bold text-slate-800">Inteligência Artificial (API)</h2>
-                            <p class="text-slate-500 text-sm mt-1">Configure sua chave do Google Gemini para ter cálculos e recomendações avançadas.</p>
-                        </div>
-                    </div>
-                    <div class="flex flex-col md:flex-row gap-3">
-                        <input type="password" id="api-key-input" placeholder="Cole sua API Key (AIzaSy...)" class="flex-1 p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500">
-                        <button onclick="saveApiKey()" id="btn-save-api" class="bg-amber-500 hover:bg-amber-600 text-white font-medium px-6 py-3 rounded-xl transition-all flex justify-center items-center gap-2">
-                            <i data-lucide="save" class="w-5 h-5"></i> Salvar Chave
-                        </button>
-                    </div>
-                </div>
             </div>
         </div>
 
@@ -387,23 +369,22 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        // IMPORTANTE: Adicionado "updateDoc" para permitir edição
         import { getFirestore, doc, setDoc, updateDoc, onSnapshot, collection, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyAxpQwy3PhdfAmxKxprnx85-qAigWq-JNw",
-            authDomain: "nutritrack-c9f96.firebaseapp.com",
-            projectId: "nutritrack-c9f96",
-            storageBucket: "nutritrack-c9f96.firebasestorage.app",
-            messagingSenderId: "817935027576",
-            appId: "1:817935027576:web:e4dca43c6188d93bac0c8d"
-        };
+        // Obtendo configurações da plataforma (Variáveis Injetadas pelo Canvas)
+        let firebaseConfig;
+        try {
+            firebaseConfig = JSON.parse(__firebase_config);
+        } catch (e) {
+            console.error("Erro ao carregar configurações do banco de dados.", e);
+        }
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
         
-        const __app_id = typeof window.__app_id !== 'undefined' ? window.__app_id : 'nutritrack-app';
+        // Regra Estrita 1: Uso da App ID fornecida
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
         let currentUser = null;
         let mealsData = [];
@@ -412,9 +393,23 @@
         let userSettings = { calorieGoal: 2000, waterGoal: 2500, macros: { carbs: 50, protein: 30, fat: 20 } };
         let selectedGoal = 'maintain'; 
         let weightChartInstance = null; 
-        let geminiApiKey = ""; 
 
         lucide.createIcons();
+
+        // Utilitário de Notificação (Substitui os alerts nativos)
+        window.showToast = (message, type = 'success') => {
+            const toast = document.createElement('div');
+            const bgColor = type === 'error' ? 'bg-rose-500' : 'bg-emerald-500';
+            toast.className = `fixed bottom-4 left-1/2 transform -translate-x-1/2 md:translate-x-0 md:left-auto md:right-8 px-6 py-3 rounded-xl shadow-lg font-medium text-white transition-all z-[999] animate-fade-in ${bgColor}`;
+            toast.innerHTML = `<div class="flex items-center gap-2"><i data-lucide="${type === 'error' ? 'alert-circle' : 'check-circle'}"></i> ${message}</div>`;
+            document.body.appendChild(toast);
+            lucide.createIcons();
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 400);
+            }, 3000);
+        };
 
         // --- Funções de Navegação ---
         window.switchTab = (tabId) => {
@@ -448,9 +443,24 @@
         };
 
         // --- Autenticação ---
+        const initAuth = async () => {
+            try {
+                // Tenta logar com o token do Canvas, se falhar ou não existir, faz login anônimo
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (err) {
+                console.error("Auth falhou:", err);
+                document.getElementById('loading-screen').classList.add('hidden');
+                document.getElementById('auth-screen').classList.remove('hidden');
+            }
+        };
+
         onAuthStateChanged(auth, (user) => {
             currentUser = user;
-            if (user && !user.isAnonymous) {
+            if (user) {
                 document.getElementById('auth-screen').classList.add('hidden');
                 attachListeners();
             } else {
@@ -459,34 +469,44 @@
             }
         });
 
+        initAuth();
+
         function attachListeners() {
             if (!currentUser) return;
             const uid = currentUser.uid;
 
-            onSnapshot(collection(db, 'artifacts', __app_id, 'users', uid, 'meals'), (snap) => {
+            // Regra Estrita 1: Caminhos padronizados
+            onSnapshot(collection(db, 'artifacts', appId, 'users', uid, 'meals'), (snap) => {
                 mealsData = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => b.timestamp - a.timestamp);
                 updateUI();
-            });
-            onSnapshot(collection(db, 'artifacts', __app_id, 'users', uid, 'weights'), (snap) => {
+            }, (error) => console.error(error));
+
+            onSnapshot(collection(db, 'artifacts', appId, 'users', uid, 'weights'), (snap) => {
                 weightsData = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => b.timestamp - a.timestamp);
                 updateUI();
-            });
-            onSnapshot(collection(db, 'artifacts', __app_id, 'users', uid, 'water'), (snap) => {
+            }, (error) => console.error(error));
+
+            onSnapshot(collection(db, 'artifacts', appId, 'users', uid, 'water'), (snap) => {
                 waterData = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => b.timestamp - a.timestamp);
                 updateUI();
-            });
-            onSnapshot(collection(db, 'artifacts', __app_id, 'users', uid, 'settings'), (snap) => {
+            }, (error) => console.error(error));
+
+            onSnapshot(collection(db, 'artifacts', appId, 'users', uid, 'settings'), (snap) => {
                 const s = snap.docs.find(d => d.id === 'profile');
                 if (s) {
                     userSettings = { ...userSettings, ...s.data() };
-                    if(s.data().geminiApiKey) {
-                        geminiApiKey = s.data().geminiApiKey;
-                        document.getElementById('api-key-input').value = geminiApiKey;
-                    }
+                    
+                    // Preenche campos da calculadora se existirem
+                    if(s.data().gender) document.getElementById('calc-gender').value = s.data().gender;
+                    if(s.data().age) document.getElementById('calc-age').value = s.data().age;
+                    if(s.data().height) document.getElementById('calc-height').value = s.data().height;
+                    if(s.data().activity) document.getElementById('calc-activity').value = s.data().activity;
+                    if(s.data().goal) window.setGoal(s.data().goal);
                 }
+                
                 document.getElementById('loading-screen').classList.add('hidden');
                 updateUI();
-            });
+            }, (error) => console.error(error));
         }
 
         function updateUI() {
@@ -502,7 +522,6 @@
             const refeicoesHoje = mealsData.filter(m => new Date(m.timestamp).setHours(0,0,0,0) === hoje);
             const calorias = refeicoesHoje.reduce((sum, m) => sum + (m.calories || 0), 0);
             
-            // NOVO: Cálculo dos Macros do Dia
             const totalCarbs = refeicoesHoje.reduce((sum, m) => sum + (m.carbs || 0), 0);
             const totalProtein = refeicoesHoje.reduce((sum, m) => sum + (m.protein || 0), 0);
             const totalFat = refeicoesHoje.reduce((sum, m) => sum + (m.fat || 0), 0);
@@ -552,7 +571,6 @@
                     <div class="flex items-center justify-between md:justify-end gap-3 w-full md:w-auto">
                         <span class="font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full text-sm whitespace-nowrap">${m.calories} kcal</span>
                         <div class="flex gap-1">
-                            <!-- Botão Editar -->
                             <button onclick="window.editMeal('${m.id}')" class="text-slate-400 hover:text-indigo-500 p-2 rounded-lg hover:bg-indigo-50"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
                             <button onclick="window.delRecord('meals', '${m.id}')" class="text-slate-400 hover:text-rose-500 p-2 rounded-lg hover:bg-rose-50"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                         </div>
@@ -560,11 +578,49 @@
                 </div>
             `).join('');
 
-            // Resto das listas (Água, Peso) inalterado por brevidade, código original é mantido
-            // ... (Água e Peso renders mantidos exatamente como o original no loop UI) ...
+            const hoje = new Date().setHours(0,0,0,0);
+            const waterList = document.getElementById('water-list');
+            const aguaHoje = waterData.filter(w => new Date(w.timestamp).setHours(0,0,0,0) === hoje);
+            
+            if (aguaHoje.length === 0) waterList.innerHTML = '<div class="text-center py-8 text-slate-400">Nenhum registro hoje.</div>';
+            else waterList.innerHTML = aguaHoje.map(w => `
+                <div class="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
+                    <div>
+                        <h4 class="font-bold text-slate-800 text-lg">${w.amount} ml</h4>
+                        <p class="text-sm text-slate-500 flex items-center gap-1 mt-1">
+                            <i data-lucide="clock" class="w-3 h-3"></i> ${new Date(w.timestamp).toLocaleTimeString([],{hour:'2-digit', minute:'2-digit'})}
+                        </p>
+                    </div>
+                    <button onclick="window.delRecord('water', '${w.id}')" class="text-slate-400 hover:text-rose-500 p-2 rounded-lg hover:bg-rose-50"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                </div>
+            `).join('');
+
+            const weightList = document.getElementById('weight-list');
+            if (weightsData.length === 0) weightList.innerHTML = '<div class="text-center py-8 text-slate-400">Nenhum peso registrado.</div>';
+            else weightList.innerHTML = weightsData.map(w => `
+                <div class="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
+                    <div>
+                        <h4 class="font-bold text-slate-800 text-lg">${w.weight} kg</h4>
+                        <p class="text-sm text-slate-500 flex items-center gap-1 mt-1">
+                            <i data-lucide="calendar" class="w-3 h-3"></i> ${new Date(w.timestamp).toLocaleDateString()}
+                        </p>
+                    </div>
+                    <button onclick="window.delRecord('weights', '${w.id}')" class="text-slate-400 hover:text-rose-500 p-2 rounded-lg hover:bg-rose-50"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                </div>
+            `).join('');
         }
 
-        // --- Funções de Edição e Banco (NOVO) ---
+        window.delRecord = async (colName, id) => {
+            if(!currentUser) return;
+            try { 
+                await deleteDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, colName, id)); 
+                window.showToast('Item removido com sucesso!');
+            } catch (e) { 
+                console.error(e); 
+                window.showToast('Erro ao remover o item.', 'error');
+            }
+        };
+
         window.editMeal = (id) => {
             const meal = mealsData.find(m => m.id === id);
             if(!meal) return;
@@ -579,7 +635,7 @@
             btnSubmit.classList.replace('hover:bg-slate-900', 'hover:bg-indigo-700');
             
             document.getElementById('btn-cancel-edit').classList.remove('hidden');
-            document.getElementById('btn-ai-add').classList.add('hidden'); // Oculta IA durante edição
+            document.getElementById('btn-ai-add').classList.add('hidden');
             
             window.scrollTo({ top: 0, behavior: 'smooth' });
             lucide.createIcons();
@@ -600,7 +656,6 @@
             lucide.createIcons();
         };
 
-        // Form Submit (Agora suporta Add e Update)
         document.getElementById('form-meal').addEventListener('submit', async (e) => {
             e.preventDefault();
             if(!currentUser) return;
@@ -610,41 +665,38 @@
             const editId = document.getElementById('editing-meal-id').value;
 
             if(!cal) {
-                alert("Para salvar manualmente, insira as calorias. Ou use o botão de IA.");
+                window.showToast("Para salvar manualmente, insira as calorias. Ou use o botão de IA.", 'error');
                 return;
             }
 
             try {
                 if(editId) {
-                    // Update
-                    const docRef = doc(db, 'artifacts', __app_id, 'users', currentUser.uid, 'meals', editId);
-                    // Atualizamos o nome/calorias. Removemos macros para forçar recalculação se editou muito (opcional)
+                    const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'meals', editId);
                     await updateDoc(docRef, { name: name, calories: Number(cal) });
+                    window.showToast('Refeição atualizada!');
                     window.cancelEdit();
                 } else {
-                    // Create (Manual)
-                    await addDoc(collection(db, 'artifacts', __app_id, 'users', currentUser.uid, 'meals'), { 
+                    await addDoc(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'meals'), { 
                         name: name, calories: Number(cal), timestamp: Date.now() 
                     });
+                    window.showToast('Refeição adicionada!');
                     document.getElementById('meal-name').value = '';
                     document.getElementById('meal-cal').value = '';
                 }
-            } catch(err) { console.error(err); }
+            } catch(err) { 
+                console.error(err); 
+                window.showToast('Ocorreu um erro ao salvar.', 'error');
+            }
         });
 
-        // --- Integração Gemini IA (NOVO) ---
+        // --- Integração Gemini IA Automática ---
         window.addMealWithAI = async () => {
             if(!currentUser) return;
             const nameInput = document.getElementById('meal-name').value;
             
             if (!nameInput) { 
-                alert('Digite o que você comeu primeiro!'); 
+                window.showToast('Digite o que você comeu primeiro!', 'error'); 
                 document.getElementById('meal-name').focus();
-                return; 
-            }
-            if (!geminiApiKey) { 
-                alert('Configure sua API Key do Google Gemini na aba Calculadora e API!'); 
-                window.switchTab('calculator');
                 return; 
             }
 
@@ -655,15 +707,20 @@
 
             try {
                 const prompt = `Estime as informações nutricionais para a seguinte refeição: "${nameInput}". 
-                Responda APENAS com um objeto JSON perfeitamente válido (sem textos antes ou depois, sem formatação markdown como \`\`\`json). 
+                Responda APENAS com um objeto JSON perfeitamente válido (sem textos antes ou depois, sem formatação markdown). 
                 O JSON deve conter as seguintes chaves numéricas inteiras:
                 "calories" (kcal estimadas), "carbs" (carboidratos em gramas), "protein" (proteínas em gramas), "fat" (gorduras em gramas).`;
                 
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
+                // Regra Mestra: Chave API é enviada vazia para auto-injeção e usa o modelo padrão
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+                
+                const response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }]
+                        contents: [{ parts: [{ text: prompt }] }],
+                        generationConfig: { responseMimeType: "application/json" }
                     })
                 });
 
@@ -671,13 +728,9 @@
 
                 const data = await response.json();
                 let textContent = data.candidates[0].content.parts[0].text;
-                // Limpa formatações markdown caso a IA retorne
-                textContent = textContent.replace(/```json/g, '').replace(/```/g, '').trim();
-                
                 const macros = JSON.parse(textContent);
 
-                // Salva no banco com os Macros
-                await addDoc(collection(db, 'artifacts', __app_id, 'users', currentUser.uid, 'meals'), { 
+                await addDoc(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'meals'), { 
                     name: nameInput, 
                     calories: macros.calories || 0,
                     carbs: macros.carbs || 0,
@@ -686,12 +739,13 @@
                     timestamp: Date.now() 
                 });
                 
+                window.showToast('Refeição gerada e adicionada!');
                 document.getElementById('meal-name').value = '';
                 document.getElementById('meal-cal').value = '';
                 
             } catch (error) {
                 console.error(error);
-                alert("Erro ao analisar com a IA. A chave pode estar incorreta ou a formatação falhou.");
+                window.showToast("Não foi possível analisar a refeição. Tente digitar de outra forma.", 'error');
             } finally {
                 btn.innerHTML = originalHtml;
                 btn.disabled = false;
@@ -699,13 +753,87 @@
             }
         };
 
-        window.delRecord = async (colName, id) => {
-            if(!currentUser) return;
-            try { await deleteDoc(doc(db, 'artifacts', __app_id, 'users', currentUser.uid, colName, id)); } 
-            catch (e) { console.error(e); }
+        window.addWaterRecord = async (amount) => {
+            if(!currentUser || !amount) return;
+            try {
+                await addDoc(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'water'), { amount: Number(amount), timestamp: Date.now() });
+                window.showToast(`+${amount}ml adicionados!`);
+            } catch (e) { console.error(e); }
         };
 
-        // --- Gráfico e resto das funções (Mantidas como original) ---
+        window.addCustomWater = () => {
+            const val = document.getElementById('water-custom').value;
+            if(val) {
+                window.addWaterRecord(val);
+                document.getElementById('water-custom').value = '';
+            }
+        };
+
+        document.getElementById('form-weight').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if(!currentUser) return;
+            const val = document.getElementById('weight-val').value;
+            try {
+                await addDoc(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'weights'), { weight: Number(val), timestamp: Date.now() });
+                document.getElementById('weight-val').value = '';
+                window.showToast('Peso registrado com sucesso!');
+            } catch(err) { console.error(err); }
+        });
+
+        document.getElementById('form-calc').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if(!currentUser) return;
+
+            const gender = document.getElementById('calc-gender').value;
+            const age = Number(document.getElementById('calc-age').value);
+            const weight = Number(document.getElementById('calc-weight').value);
+            const height = Number(document.getElementById('calc-height').value);
+            const activity = Number(document.getElementById('calc-activity').value);
+
+            let bmr = (10 * weight) + (6.25 * height) - (5 * age);
+            bmr = gender === 'male' ? bmr + 5 : bmr - 161;
+
+            let finalCals = bmr * activity;
+            if(selectedGoal === 'lose') finalCals -= 500;
+            if(selectedGoal === 'gain') finalCals += 500;
+
+            const roundedCals = Math.round(finalCals);
+            const waterGoal = Math.round(weight * 35);
+
+            let macros = { carbs: 50, protein: 30, fat: 20 };
+            if (selectedGoal === 'lose') macros = { carbs: 40, protein: 40, fat: 20 };
+            if (selectedGoal === 'gain') macros = { carbs: 50, protein: 25, fat: 25 };
+
+            try {
+                const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'settings', 'profile');
+                await setDoc(docRef, { 
+                    calorieGoal: roundedCals,
+                    waterGoal: waterGoal,
+                    gender: gender,
+                    age: age,
+                    height: height,
+                    activity: activity,
+                    goal: selectedGoal,
+                    macros: macros,
+                    updatedAt: Date.now()
+                }, { merge: true });
+
+                if (weightsData.length === 0) {
+                     await addDoc(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'weights'), { 
+                         weight: weight, 
+                         timestamp: Date.now() 
+                     });
+                }
+
+                window.showToast('Configurações Salvas com Sucesso!');
+                setTimeout(() => window.switchTab('dashboard'), 1500);
+
+            } catch(err) { 
+                console.error(err); 
+                window.showToast("Erro ao salvar perfil. Tente novamente.", "error"); 
+            }
+        });
+
         function renderChart() {
             if (weightsData.length < 2) {
                 document.getElementById('empty-chart-msg').style.display = 'flex';
@@ -729,6 +857,45 @@
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, border: {display: false} }, y: { grid: { color: '#f1f5f9' }, border: {display: false} } } }
             });
         }
+
+        // Lógica de Tela de Login Manual
+        window.toggleAuthMode = () => {
+            const isLogin = document.getElementById('auth-title').innerText === 'Entrar';
+            document.getElementById('auth-title').innerText = isLogin ? 'Criar Conta' : 'Entrar';
+            document.getElementById('auth-submit-btn').innerText = isLogin ? 'Cadastrar' : 'Entrar';
+            document.getElementById('auth-toggle-text').innerHTML = isLogin 
+                ? 'Já tem uma conta? <span class="text-emerald-600 cursor-pointer hover:underline font-medium" onclick="toggleAuthMode()">Entrar</span>' 
+                : 'Não tem uma conta? <span class="text-emerald-600 cursor-pointer hover:underline font-medium" onclick="toggleAuthMode()">Criar agora</span>';
+        };
+
+        document.getElementById('form-auth').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('auth-email').value;
+            const pass = document.getElementById('auth-pass').value;
+            const isLogin = document.getElementById('auth-title').innerText === 'Entrar';
+            const btn = document.getElementById('auth-submit-btn');
+            
+            btn.innerHTML = '<i class="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full mx-auto block"></i>';
+            
+            try {
+                if (isLogin) {
+                    await signInWithEmailAndPassword(auth, email, pass);
+                } else {
+                    await createUserWithEmailAndPassword(auth, email, pass);
+                }
+            } catch (error) {
+                window.showToast('Erro: Email ou senha inválidos', 'error');
+                btn.innerHTML = isLogin ? 'Entrar' : 'Cadastrar';
+            }
+        });
+
+        window.handleLogout = async () => {
+            await signOut(auth);
+            mealsData = []; weightsData = []; waterData = [];
+            document.getElementById('auth-email').value = '';
+            document.getElementById('auth-pass').value = '';
+            document.getElementById('auth-submit-btn').innerHTML = 'Entrar';
+        };
         
     </script>
 </body>
